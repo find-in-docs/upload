@@ -12,6 +12,8 @@ import re
 import sys
 from itertools import islice
 from decouple import config
+from nltk.corpus import stopwords
+from nltk.tokenize import RegexpTokenizer
 
 CHUNK_LEN_DEFAULT = 2
 NUM_CHUNKS = 3
@@ -48,17 +50,37 @@ def extract_reviews(in_filename, out_filename):
                     for chunk in read_file_chunk(fr, chunk_len):
                         for element in chunk:
                             review = review_re.match(element).group(1)
-                            print(review)
+                            yield review
 
     except FileNotFoundError as e:
         print('Error occurred !!!\n\t\t{}', e)
         print("Could not find file: {} or {}", in_filename, out_filename)
 
 
+def normalize_reviews(review):
+
+    # Remove apostrophe from the whole text before tokenizing.
+    # Tokenizing splits "Don't" into "Don" and "t".
+    # We would rather have "Dont"
+    # Also remove all number characters.
+    remove_chars = set(["'", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"])
+    review = ''.join([c for c in review if c not in remove_chars])
+
+    words = RegexpTokenizer(r'\w+').tokenize(review)   # split text on word boundaries.
+    words = [word for word in words if len(word) != 0] # remove empty words.
+    words = [word.lower() for word in words]        
+
+    stop_words = set(stopwords.words('english'))
+    words = [w for w in words if w not in stop_words]
+
+    print(' '.join(words))
+
+
 if __name__ == '__main__':
     try:
         assert len(sys.argv) == 3
-        extract_reviews(sys.argv[1], sys.argv[2])
+        for review in extract_reviews(sys.argv[1], sys.argv[2]):
+            normalized_review = normalize_reviews(review)
     except AssertionError as e:
         print('Error occurred !!!\n\t\t{}', e)
         print('Usage: preprocess_text.py json_reviews_filepath')
