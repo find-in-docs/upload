@@ -40,21 +40,20 @@ def read_file_chunk(file_handle, chunk_len=CHUNK_LEN_DEFAULT):
         yield chunk
 
 
-def extract_reviews(in_filename, out_filename):
+def extract_reviews(in_filename):
 
     try:
         with open(in_filename) as fr:
-            with open(out_filename, 'w') as fw: 
-                for _ in range(0, NUM_CHUNKS):
-                    chunk_len = config("CHUNK_LEN", cast=int)
-                    for chunk in read_file_chunk(fr, chunk_len):
-                        for element in chunk:
-                            review = review_re.match(element).group(1)
-                            yield review
+            for _ in range(0, NUM_CHUNKS):
+                chunk_len = config("CHUNK_LEN", cast=int)
+                for chunk in read_file_chunk(fr, chunk_len):
+                    for element in chunk:
+                        review = review_re.match(element).group(1)
+                        yield review
 
     except FileNotFoundError as e:
         print('Error occurred !!!\n\t\t{}', e)
-        print("Could not find file: {} or {}", in_filename, out_filename)
+        print("Could not find file: {} or {}", in_filename)
 
 
 def normalize_reviews(review):
@@ -73,14 +72,24 @@ def normalize_reviews(review):
     stop_words = set(stopwords.words('english'))
     words = [w for w in words if w not in stop_words]
 
-    print(' '.join(words))
+    return ' '.join(words)
 
 
 if __name__ == '__main__':
     try:
         assert len(sys.argv) == 3
-        for review in extract_reviews(sys.argv[1], sys.argv[2]):
-            normalized_review = normalize_reviews(review)
+        in_filename = sys.argv[1]
+        out_filename = sys.argv[2]
+
+        with open(out_filename, "w") as fw:
+            for review in extract_reviews(in_filename):
+                normalized_review = normalize_reviews(review) + '\n'
+                fw.write(normalized_review)
+
+    except FileNotFoundError as e:
+        print('Error occurred !!!\n\t\t{}', e)
+        print("Could not find file: {}", out_filename)
+
     except AssertionError as e:
         print('Error occurred !!!\n\t\t{}', e)
-        print('Usage: preprocess_text.py json_reviews_filepath')
+        print('Usage: preprocess_text.py json_reviews_filepath output_filepath')
