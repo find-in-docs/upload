@@ -2,39 +2,22 @@ extern crate bincode;
 
 use std::io::{self, BufRead, BufReader};
 use std::fs::File;
-// use std::error::Error;
 use regex::Regex;
 
 
-fn extract_data<R>(num_reviews: usize, reader: R) -> io::Result<()> 
+fn extract_data<R>(num_reviews: usize, reader: &mut R) -> io::Result<()> 
         where R: BufRead + std::fmt::Debug
 {
-    let reviews = reader.lines().take(num_reviews);
-    println!("{:?}", reviews);
-
     let re_review = Regex::new(r#"^.*?"text"\s*:\s*"(.+)",\s*"date"\s*:\s*"(.*)".*$"#).unwrap();
 
-    for review in reviews {
+    let reviews = reader.lines().take(num_reviews).collect::<io::Result<Vec<String>>>()?;
+    let reviews = reviews.iter()
+                    .map( |r| re_review.captures(r).unwrap() )
+                    .map( |c| (c.get(1).map_or("", |m| m.as_str()),
+                                 c.get(2).map_or("", |m| m.as_str())));
 
-        // println!("{:?}", &review); 
-        let review: String = review?;
-        let captures = re_review.captures(&review).unwrap();
-        let review = captures.get(1).map_or("", |m| m.as_str());
-        let date = captures.get(2).map_or("", |m| m.as_str());
-     
-        if review.len() == 0 {
-     
-            println!("{}", date);
-            println!("Review not found\n");
-        } else if date.len() == 0 {
-     
-            println!("Date not found");
-            println!("{}\n", review);
-        } else {
-
-            println!("Date: {}\nReview: {}", date, review);
-        }
-        println!("-------------------------------------------------");
+    for r in reviews {
+        println!("Date: {}\nReview: {}", r.1, r.0);
     }
  
     Ok(())   
@@ -43,9 +26,9 @@ fn extract_data<R>(num_reviews: usize, reader: R) -> io::Result<()>
 fn main() -> std::io::Result<()> {
 
     let f_in = File::open("/Users/samirgadkari/work/datasets/yelp/yelp_academic_dataset_review.json")?;
-    let reader = BufReader::new(f_in);
+    let mut reader = BufReader::new(f_in);
 
-    let _result = extract_data(20, reader);
+    let _result = extract_data(20, &mut reader);
 
     Ok(())
 }
