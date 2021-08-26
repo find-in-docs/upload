@@ -3,7 +3,29 @@ extern crate bincode;
 use std::io::{self, BufRead, BufReader};
 use std::fs::File;
 use regex::Regex;
+use chrono::{NaiveDateTime};
 
+struct Review {
+
+    id:   u64,
+    date: Option<NaiveDateTime>,
+    text: String
+}
+ 
+// Lowercase all letters.
+// Remove apostrophes.
+// Split review into words.
+// Remove punctuation.
+// Remove empty words.
+// Remove stopwords.
+fn build_review(review: (&str, &str)) -> Review {
+
+    Review{
+        id:   0,
+        date: NaiveDateTime::parse_from_str(&review.1, "%Y-%m-%d %H:%M:%S").ok(),
+        text: review.0.to_string(),
+    }
+}
 
 fn extract_data<R>(num_reviews: usize, reader: &mut R) -> io::Result<()> 
         where R: BufRead + std::fmt::Debug
@@ -14,10 +36,12 @@ fn extract_data<R>(num_reviews: usize, reader: &mut R) -> io::Result<()>
     let reviews = reviews.iter()
                     .map( |r| re_review.captures(r).unwrap() )
                     .map( |c| (c.get(1).map_or("", |m| m.as_str()),
-                                 c.get(2).map_or("", |m| m.as_str())));
+                                 c.get(2).map_or("", |m| m.as_str())))
+                    .map( |r| build_review(r) );
 
     for r in reviews {
-        println!("Date: {}\nReview: {}", r.1, r.0);
+        println!("Id: {}\nDate: {:?}\nReview: {}\n---------------------------------\n",
+            r.id, r.date, r.text);
     }
  
     Ok(())   
