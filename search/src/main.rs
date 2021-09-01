@@ -9,46 +9,53 @@ use chrono::{NaiveDateTime};
 
 struct Context {
 
-    ID: usize,
-    word_to_id: HashMap<&'static str, usize>,
+    id: usize,
+    word_to_id: HashMap<String, usize>,
     re_word: Regex,
     re_review: Regex,
 }
     
-struct Review<'a> {
+#[derive(Debug)]
+struct Review {
 
     id:   u64,
     date: Option<NaiveDateTime>,
-    text: &'a str,
-    word_ids: Vec<usize>,
+    text: String,
+    word_ids: Option<Vec<usize>>,
 }
 
-impl<'a> Review<'a> {
+impl Review {
 
-    pub fn new(review: (&'a str, &'a str)) -> Box<Review> {
+    pub fn new(review: (String, String)) -> Box<Review> {
 
-        Box::new(Review{
+        let review = Review{
             id:   0,
             date: NaiveDateTime::parse_from_str(&review.1, "%Y-%m-%d %H:%M:%S").ok(),
-            text: review.0,
-            word_ids: Vec::new(),
-        })
+            text: review.0.clone(),
+            word_ids: None,
+        };
+
+        let b: Box<Review> = Box::new(review);
+
+        b
     }
 }
  
-fn get_word_id(c: &mut Context, word: &str) -> usize {
+fn get_word_id(c: &mut Context, word: String) -> usize {
 
-    if c.word_to_id.contains_key(word) {
-        *c.word_to_id.get(word).unwrap()
+    if c.word_to_id.contains_key(&word) {
+        *c.word_to_id.get(&word).unwrap()
     } else {
-        c.ID += 1;
-        c.word_to_id.insert(&word, c.ID);
-        c.ID
+        c.id += 1;
+        c.word_to_id.insert(word, c.id);
+        c.id
     }
 }
 
-pub fn update_word_ids<'b>(c: &mut Context, review: &'b mut Review<'b>) -> &'b mut Review<'b> {
+fn update_word_ids(_c: &mut Context, review: Box<Review>) 
+    -> Box<Review> {
 
+    /*
     use rust_stemmers::{Algorithm, Stemmer};
     let stemmer = Stemmer::create(Algorithm::English);
 
@@ -68,25 +75,41 @@ pub fn update_word_ids<'b>(c: &mut Context, review: &'b mut Review<'b>) -> &'b m
         words.push(capture.get(i).map_or("".to_string(), |m| m.as_str().to_string()))
     }
         
-    review.word_ids = words.iter()
+    review.word_ids = Some(words.iter()
                     .map(|s| stemmer.stem(s))
-                    .map(|w| get_word_id(&mut c, &w))
-                    .collect::<Vec<usize>>();
+                    .map(|w| get_word_id(c, (&w).to_string()))
+                    .collect::<Vec<usize>>());
+    */
     
     review
 }
 
-fn extract_data<R>(c: &mut Context, num_reviews: usize, reader: &mut R) -> io::Result<()> 
+fn extract_data<R>(num_reviews: usize, reader: &mut R) -> io::Result<()> 
         where R: BufRead + std::fmt::Debug
 {
-    let reviews = reader.lines().take(num_reviews).collect::<io::Result<Vec<String>>>()?;
-    let reviews = reviews.iter()
-                    .map( |r| c.re_review.captures(r).unwrap() )
-                    .map( |captures| (captures.get(1).map_or("", |m| m.as_str()),
-                                 captures.get(2).map_or("", |m| m.as_str())) )
-                    .map( |r| Review::new(r) )
-                    .map( |r| update_word_ids(c, &mut r) );
+    let mut context = Context {
+        id:         0,
+        word_to_id: HashMap::new(),
+        re_word:    Regex::new(r"(\w+)").unwrap(),
+        re_review:  
+            Regex::new(r#"^.*?"text"\s*:\s*"(.+)",\s*"date"\s*:\s*"(.*)".*$"#).unwrap(),
+    };
 
+    let reviews = reader.lines().take(num_reviews).collect::<io::Result<Vec<String>>>()?;
+    let reviews: Vec<Box<Review>> = reviews.iter()
+        .map( |r| context.re_review.captures(r).unwrap() )
+        .map( |captures| (captures.get(1).map_or("", |m| &m.as_str()),
+                     captures.get(2).map_or("", |m| &m.as_str())) )
+        .map( |r| (r.0.to_string(), r.1.to_string()) )
+        .map( |r| Review::new(r) )
+        .collect::<Vec<Box<Review>>>();
+
+    let reviews: Vec<Box<Review>> =
+            reviews.into_iter()
+             .map( |r| update_word_ids(&mut context, r) )
+             .collect::<Vec<Box<Review>>>();
+
+    println!("{:?}", reviews);
     for r in reviews {
         println!("Id: {}\nDate: {:?}\nReview: {}\n---------------------------------\n",
             r.id, r.date, r.text);
@@ -100,14 +123,7 @@ fn main() -> std::io::Result<()> {
     let f_in = File::open("/Users/samirgadkari/work/datasets/yelp/yelp_academic_dataset_review.json")?;
     let mut reader = BufReader::new(f_in);
 
-    let mut context = Context {
-        ID:         0,
-        word_to_id: HashMap::new(),
-        re_word:    Regex::new(r"(\w+)").unwrap(),
-        re_review:  
-            Regex::new(r#"^.*?"text"\s*:\s*"(.+)",\s*"date"\s*:\s*"(.*)".*$"#).unwrap(),
-    };
-    let _result = extract_data(&mut context, 20, &mut reader);
+    let _result = extract_data(20, &mut reader);
 
     Ok(())
 }
