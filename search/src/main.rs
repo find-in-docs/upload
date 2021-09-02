@@ -104,7 +104,6 @@ fn extract_data(num_reviews: usize) -> io::Result<()>
         id:         0,
         word_to_id: HashMap::new(),
         re_word:    Regex::new(r#"(\w+)"#).unwrap(),
-        // stopwords:  (&stopwords()).as_ref().unwrap().to_vec(),
         stopwords:  HashSet::from_iter((&stopwords()).as_ref().unwrap().to_vec()),
         stemmer:    Stemmer::create(Algorithm::English),
         re_review:  
