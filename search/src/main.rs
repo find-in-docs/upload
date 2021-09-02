@@ -21,7 +21,7 @@ struct Review {
     id:   u64,
     date: Option<NaiveDateTime>,
     text: String,
-    word_ids: Option<Vec<usize>>,
+    word_ids: Vec<usize>,
 }
 
 impl Review {
@@ -32,7 +32,7 @@ impl Review {
             id:   0,
             date: NaiveDateTime::parse_from_str(&review.1, "%Y-%m-%d %H:%M:%S").ok(),
             text: review.0.clone(),
-            word_ids: None,
+            word_ids: vec![],
         };
 
         let b: Box<Review> = Box::new(review);
@@ -52,10 +52,9 @@ fn get_word_id(c: &mut Context, word: String) -> usize {
     }
 }
 
-fn update_word_ids(_c: &mut Context, review: Box<Review>) 
+fn update_word_ids(context: &mut Context, mut review: Box<Review>) 
     -> Box<Review> {
 
-    /*
     use rust_stemmers::{Algorithm, Stemmer};
     let stemmer = Stemmer::create(Algorithm::English);
 
@@ -63,23 +62,16 @@ fn update_word_ids(_c: &mut Context, review: Box<Review>)
                 .to_string()
                 .to_lowercase();
     text.retain( |c| c != '\'' );
-    
-    let captures = c.re_word.captures(&text);
+
     let mut words: Vec<String> = vec![];
-    for (i, capture) in captures.iter().enumerate() {
-
-        if i == 0 {   // ignore full match
-            continue;
-        }
-
-        words.push(capture.get(i).map_or("".to_string(), |m| m.as_str().to_string()))
-    }
-        
-    review.word_ids = Some(words.iter()
+    for caps in context.re_word.captures_iter(&text) {
+        words.push(caps[0].to_string());
+    };
+    
+    review.word_ids = words.iter()
                     .map(|s| stemmer.stem(s))
-                    .map(|w| get_word_id(c, (&w).to_string()))
-                    .collect::<Vec<usize>>());
-    */
+                    .map(|w| get_word_id(context, (&w).to_string()))
+                    .collect::<Vec<usize>>();
     
     review
 }
@@ -90,7 +82,7 @@ fn extract_data<R>(num_reviews: usize, reader: &mut R) -> io::Result<()>
     let mut context = Context {
         id:         0,
         word_to_id: HashMap::new(),
-        re_word:    Regex::new(r"(\w+)").unwrap(),
+        re_word:    Regex::new(r#"(\w+)"#).unwrap(),
         re_review:  
             Regex::new(r#"^.*?"text"\s*:\s*"(.+)",\s*"date"\s*:\s*"(.*)".*$"#).unwrap(),
     };
@@ -109,12 +101,12 @@ fn extract_data<R>(num_reviews: usize, reader: &mut R) -> io::Result<()>
              .map( |r| update_word_ids(&mut context, r) )
              .collect::<Vec<Box<Review>>>();
 
-    println!("{:?}", reviews);
+    // println!("{:?}", reviews);
     for r in reviews {
-        println!("Id: {}\nDate: {:?}\nReview: {}\n---------------------------------\n",
-            r.id, r.date, r.text);
+        println!("Id: {}\nDate: {:?}\nReview: {}\nWord IDs: {:?}\nWord ID len: {}\n---------------------------------\n",
+            r.id, r.date, r.text, r.word_ids, r.word_ids.len());
     }
- 
+
     Ok(())   
 }
 
