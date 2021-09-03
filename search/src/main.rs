@@ -9,10 +9,12 @@ use std::fs::{self, File};
 use regex::Regex;
 use chrono::{NaiveDateTime};
 
+type WordId = usize;
+
 struct Context {
 
-    id: usize,
-    word_to_id: HashMap<String, usize>,
+    id: WordId,
+    word_to_id: HashMap<String, WordId>,
     re_word: Regex,
     stopwords: HashSet<String>,
     stemmer:   Stemmer,
@@ -25,7 +27,7 @@ struct Review {
     id:   u64,
     date: Option<NaiveDateTime>,
     text: String,
-    word_ids: Vec<usize>,
+    word_ids: Vec<WordId>,
 }
 
 
@@ -46,7 +48,7 @@ impl Review {
     }
 }
  
-fn get_word_id(c: &mut Context, word: String) -> usize {
+fn get_word_id(c: &mut Context, word: String) -> WordId {
 
     if c.word_to_id.contains_key(&word) {
         *c.word_to_id.get(&word).unwrap()
@@ -76,7 +78,7 @@ fn update_word_ids(context: &mut Context, mut review: Box<Review>)
                     .collect::<Vec<String>>();
     review.word_ids = stemmed_words.iter()
                     .map(|w| get_word_id(context, (&w).to_string()))
-                    .collect::<Vec<usize>>();
+                    .collect::<Vec<WordId>>();
     
     review
 }
