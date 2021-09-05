@@ -6,13 +6,15 @@ use std::collections::{HashMap, HashSet};
 use std::iter::FromIterator;
 use std::io::{self, BufRead, BufReader};
 use std::fs::{self, File};
-use regex::Regex;
+use regex::{Regex, Captures};
 use chrono::{NaiveDateTime};
 
 type WordId = usize;
+type ReviewId = usize;
 
 struct Context {
 
+    max_review_id: ReviewId,
     id: WordId,
     word_to_id: HashMap<String, WordId>,
     re_word: Regex,
@@ -24,7 +26,7 @@ struct Context {
 #[derive(Debug)]
 struct Review {
 
-    id:   u64,
+    id:   ReviewId,
     date: Option<NaiveDateTime>,
     text: String,
     word_ids: Vec<WordId>,
@@ -33,10 +35,10 @@ struct Review {
 
 impl Review {
 
-    pub fn new(review: (String, String)) -> Box<Review> {
+    pub fn new(context: &mut Context, review: (String, String)) -> Box<Review> {
 
         let review = Review{
-            id:   0,
+            id:   context.max_review_id,
             date: NaiveDateTime::parse_from_str(&review.1, "%Y-%m-%d %H:%M:%S").ok(),
             text: review.0.clone(),
             word_ids: vec![],
@@ -44,6 +46,7 @@ impl Review {
 
         let b: Box<Review> = Box::new(review);
 
+        context.max_review_id += 1;
         b
     }
 }
@@ -103,6 +106,7 @@ fn extract_data(num_reviews: usize) -> io::Result<()>
     let reader = BufReader::new(f_in);
     
     let mut context = Context {
+        max_review_id:  0,
         id:         0,
         word_to_id: HashMap::new(),
         re_word:    Regex::new(r#"(\w+)"#).unwrap(),
@@ -113,12 +117,14 @@ fn extract_data(num_reviews: usize) -> io::Result<()>
     };
 
     let reviews = reader.lines().take(num_reviews).collect::<io::Result<Vec<String>>>()?;
-    let reviews: Vec<Box<Review>> = reviews.iter()
+    let captures = reviews.iter()
         .map( |r| context.re_review.captures(r).unwrap() )
+        .collect::<Vec<Captures>>();
+    let reviews = captures.iter()
         .map( |captures| (captures.get(1).map_or("", |m| &m.as_str()),
                      captures.get(2).map_or("", |m| &m.as_str())) )
         .map( |r| (r.0.to_string(), r.1.to_string()) )
-        .map( |r| Review::new(r) )
+        .map( |r| Review::new(&mut context, r) )
         .collect::<Vec<Box<Review>>>();
 
     let reviews: Vec<Box<Review>> =
