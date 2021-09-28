@@ -1,0 +1,4 @@
+in_docs_filename: /Users/samirgadkari/work/datasets/yelp/yelp_academic_dataset_review.json
+out_dirname: /Users/samirgadkari/work/datasets/yelp/processed
+in_stopwords: /Users/samirgadkari/work/datasets/yelp/english_stopwords.json
+

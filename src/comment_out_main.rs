@@ -143,7 +143,7 @@ fn extract_data(num_reviews: usize) -> io::Result<()> {
     Ok(())
 }
 
-fn main() -> std::io::Result<()> {
+fn comment_out_main() -> std::io::Result<()> {
     let _result = extract_data(20);
 
     Ok(())
