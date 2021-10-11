@@ -10,14 +10,16 @@ mod doc_id;
 use chrono::NaiveDateTime;
 pub use doc_id::get_doc_id;
 use regex::Regex;
-use rust_stemmers::{Algorithm, Stemmer};
-use std::collections::{HashMap, HashSet};
-use std::fs::{self, File};
+// use rust_stemmers::{Algorithm, Stemmer};
+// use rust_stemmers::Stemmer;
+// use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
+use std::fs::File;
 
 #[allow(unused_imports)]
-use std::io::{BufRead, BufReader, ErrorKind};
+use std::io::{BufRead, BufReader, ErrorKind, Lines};
 
-use std::iter::FromIterator;
+// use std::iter::FromIterator;
 
 pub type DocId = usize;
 pub type WordId = usize;
@@ -40,91 +42,163 @@ impl Doc<'_> {
     }
 }
 
-struct Context {
-    word_to_id: HashMap<String, WordId>,
-    stopwords: HashSet<String>,
-    stemmer: Stemmer,
-    re_doc: Regex,
-    re_word: Regex,
+pub struct Data<'a> {
+    lines: Option<std::iter::Take<Lines<&'a mut BufReader<File>>>>,
+    docs: Option<Vec<Doc<'a>>>,
+    stopwords: Option<HashSet<String>>,
 }
 
-fn stopwords(in_stopwords: &str) -> Option<Vec<String>> {
-    let data = fs::read_to_string(in_stopwords).expect("Unable to read file");
-
-    let stopwords: serde_json::Value = serde_json::from_str(&data).expect("Unable to parse");
-
-    Some(
-        stopwords["english_stopwords"]
-            .as_array()?
-            .iter()
-            .map(|v| v.as_str().unwrap().to_string())
-            .collect::<Vec<String>>(),
-    )
+pub trait Processing {
+    /*fn update_option<'a, T, Q>(
+        opt: &'a Option<Q>,
+        updater: &dyn FnMut(Q) -> Option<T>,
+    ) -> Option<T>;*/
+    fn string_to_doc<'a>(re_doc: &Regex, s: &'a str) -> Option<Doc<'a>>;
+    fn extract_docs(&mut self, in_docs: &mut BufReader<File>, num_docs: usize, in_stopwords: &str);
+    fn load_stopwords(&mut self, stopwords_fn: &str);
 }
 
-fn string_to_doc<'a>(re_doc: &Regex, s: &'a str) -> Option<Doc<'a>> {
-    let doc = match re_doc.captures(&s) {
-        None => None,
-        Some(c) => {
-            let text = c.get(1);
-            let date = c.get(2);
-            if (text == None) || (date == None) {
-                return None;
+impl Data<'_> {
+    pub fn new() -> Box<Data<'static>> {
+        Box::new(Data {
+            lines: None,
+            docs: None,
+            stopwords: None,
+        })
+    }
+}
+
+impl Processing for Data<'_> {
+    fn string_to_doc<'a>(re_doc: &Regex, s: &'a str) -> Option<Doc<'a>> {
+        let doc = match re_doc.captures(&s) {
+            None => None,
+            Some(c) => {
+                let text = c.get(1);
+                let date = c.get(2);
+                if (text == None) || (date == None) {
+                    return None;
+                }
+                let text = text.map_or("", |m| m.as_str());
+                let date = date.map_or("", |m| m.as_str());
+                let document = Doc::new((text, date));
+                println!("{:?}", document);
+                Some(*document)
+                // Some(Doc::new((text, date)))
             }
-            let text = text.map_or("", |m| m.as_str());
-            let date = date.map_or("", |m| m.as_str());
-            let document = Doc::new((text, date));
-            println!("{:?}", document);
-            Some(*document)
-            // Some(Doc::new((text, date)))
+        };
+
+        doc
+    }
+
+    fn extract_docs(
+        &mut self,
+        docs_reader: &mut BufReader<File>,
+        num_docs: usize,
+        in_stopwords: &str,
+    ) {
+        let re_doc: Regex =
+            Regex::new(r#"^.*?"text"\s*:\s*"(.+)",\s*"date"\s*:\s*"(.*)".*$"#).unwrap();
+
+        self.lines = Some(docs_reader.lines().take(num_docs));
+        if let Some(lines) = self.lines {
+            self.docs = lines.map(|x| {
+                Some(
+                    lines
+                        .filter_map(Result::ok)
+                        .filter_map(|s: &str| self::Processing::string_to_doc(&re_doc, s))
+                        .collect::<Vec<Doc>>(),
+                )
+            });
+        } else {
+            self.docs = None;
         }
-    };
+        /*self.docs =
+        Processing::update_option::<Vec<Doc>, std::iter::Take<Lines<&mut BufReader<File>>>>(
+            &self.lines,
+            &(|lines: &std::iter::Take<Lines<&mut BufReader<File>>>| {
+                Some(
+                    (*lines)
+                        .filter_map(Result::ok)
+                        .filter_map(|s| self::Processing::string_to_doc(&re_doc, &s))
+                        .collect::<Vec<Doc>>(),
+                )
+            }),
+        );*/
+        self.load_stopwords(in_stopwords);
+    }
 
-    doc
-}
-
-pub fn extract_docs<'a>(
-    in_filename: &'a str,
-    in_stopwords: &str,
-    _out_dirname: &str,
-    num_docs: usize,
-) -> DocResult<'a> {
-    let f_in = File::open(in_filename)?;
-    let reader = BufReader::new(f_in);
-
-    let context = Context {
-        id: 0,
-
-        word_to_id: HashMap::new(),
-        stopwords: HashSet::from_iter((&stopwords(in_stopwords)).as_ref().unwrap().to_vec()),
-        stemmer: Stemmer::create(Algorithm::English),
-
-        re_doc: Regex::new(r#"^.*?"text"\s*:\s*"(.+)",\s*"date"\s*:\s*"(.*)".*$"#).unwrap(),
-        re_word: Regex::new(r#"(\w+)"#).unwrap(),
-    };
-
-    Ok(reader
-        .lines() // each line is a document
-        .take(num_docs)
-        .filter_map(Result::ok)
-        .filter_map(|s| string_to_doc(&context.re_doc, &s))
-        .collect::<Vec<Doc>>())
-
-    /*
-    // let _docs = strings.filter_map(|s| string_to_doc(&mut context, &s));
-    let mut docs: Vec<Doc> = vec![];
-    for s in strings {
-        match string_to_doc(&context.re_doc, &s) {
-            None => {
-                println!("None");
-                ()
-            }
-            Some(d) => {
-                println!("Some: d = {:?}", d);
-                docs.push(d)
-            }
+    /*fn update_option<'a, T, Q>(opt: &'a Q, updater: &dyn FnMut(Q) -> Option<T>) -> Option<T> {
+        match opt {
+            None => &None,
+            Some(v) => updater(*v),
         }
     }*/
 
-    // Ok(docs)
+    fn load_stopwords(&mut self, in_stopwords: &str) {
+        let data = std::fs::read_to_string(in_stopwords).expect("Unable to read file");
+        let stopwords: serde_json::Value = serde_json::from_str(&data).expect("Unable to parse");
+
+        self.stopwords = stopwords["english_stopwords"]
+            .as_array()
+            .map(|x| {
+                Some(
+                    x.iter()
+                        .map(|v| v.as_str().unwrap().to_string())
+                        .collect::<HashSet<String>>(),
+                )
+            })
+            .unwrap_or(None);
+        /*self.stopwords = Processing::update_option::<HashSet<String>, Vec<serde_json::value::Value>>(
+            &stopwords["english_stopwords"].as_array(),
+            &(|stopwords: Vec<serde_json::value::Value>| {
+                Some(
+                    stopwords
+                        .iter()
+                        .map(|v| v.as_str().unwrap().to_string())
+                        .collect::<HashSet<String>>(),
+                )
+            }),
+        );*/
+    }
+
+    /*
+    fn extract_docs(
+        &mut self,
+        in_filename: &str,
+        stopwords_fn: &str,
+        _out_dirname: &str,
+        num_docs: usize,
+    ) {
+        let f_in = File::open(in_filename).expect(&format!("Could not open file: {}", in_filename));
+
+        let reader = BufReader::new(f_in);
+        let re_doc: Regex =
+            Regex::new(r#"^.*?"text"\s*:\s*"(.+)",\s*"date"\s*:\s*"(.*)".*$"#).unwrap();
+
+        self.lines = reader.lines().take(num_docs);
+        self.docs = self
+            .lines
+            .filter_map(Result::ok)
+            .filter_map(|s| self.string_to_doc(&re_doc, &s))
+            .collect::<Vec<Doc>>();
+
+        /*
+        // let _docs = strings.filter_map(|s| string_to_doc(&mut context, &s));
+        let mut docs: Vec<Doc> = vec![];
+        for s in strings {
+            match string_to_doc(&context.re_doc, &s) {
+                None => {
+                    println!("None");
+                    ()
+                }
+                Some(d) => {
+                    println!("Some: d = {:?}", d);
+                    docs.push(d)
+                }
+            }
+        }*/
+
+        // Ok(docs)
+    }
+    */
 }

@@ -18,3 +18,14 @@ pub fn load_config() -> std::result::Result<Config, DocError> {
     println!("{:?}", config);
     Ok(config)
 }
+
+/*impl<T> std::iter::Iterator for Option {
+    type Item = Option;
+
+    fn next(&mut self) -> Self::Item {
+        match self {
+            None => None,
+            Some(x) => x,
+        }
+    }
+}*/
