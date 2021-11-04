@@ -7,6 +7,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -27,6 +29,29 @@ type Config struct {
 	RawDocumentsFn string `yaml:"raw-documents-fn"`
 	OutputDirFn    string `yaml:"output-dir-fn"`
 	StopwordsFn    string `yaml:"stopwords-fn"`
+}
+
+func process(doc *Doc, r *strings.Replacer, re *regexp.Regexp) *[]string {
+	s := strings.ToLower(doc.Text)
+	s = r.Replace(s)
+
+	matches := re.FindAllStringSubmatch(s, -1)
+	if matches != nil {
+		wordMatches := make([]string, len(matches))
+		matchNum := 0
+		for _, match := range matches {
+			if len(match) != 2 {
+				fmt.Printf("len(match) is %d which is invalid\n", len(match))
+				os.Exit(-1)
+			}
+			wordMatches[matchNum] = match[1]
+			matchNum += 1
+		}
+
+		return &wordMatches
+	} else {
+		return nil
+	}
 }
 
 func main() {
@@ -69,16 +94,27 @@ func main() {
 	}
 
 	doc := &Doc{}
-	i := 0
+	docNum := 0
+
+	// isn't -> isnt
+	// solar_eclipse -> solar eclipse
+	// We also remove _ because it is a part of \w rexexp,
+	// and we don't want the whole "solar_eclipse" as a word.
+	// We're still ok with 0-9 being part of the word,
+	// although maybe that may change after some experience.
+	r := strings.NewReplacer("'", "", "_", " ")
+
+	re := regexp.MustCompile(`(\w+)`)
 	for yamlDecoder.More() {
 		if err = yamlDecoder.Decode(doc); err == io.EOF {
 			break
 		} else if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("%10v doc: %#v\n\n", i, doc)
-		i += 1
+		fmt.Printf("%10v doc: %#v\n\n", docNum, doc)
+		_ = process(doc, r, re)
+		docNum += 1
 	}
 
-	fmt.Printf("Number of docs: %d", i)
+	fmt.Printf("Number of docs: %d", docNum)
 }
