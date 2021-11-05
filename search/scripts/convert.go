@@ -65,6 +65,7 @@ func main() {
 		fmt.Printf("Error opening file: %s, %s", absConfigPath, err)
 		os.Exit(-1)
 	}
+	defer configFile.Close()
 
 	var config Config
 	decoder := yaml.NewDecoder(configFile)
