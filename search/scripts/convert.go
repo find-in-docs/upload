@@ -37,11 +37,17 @@ type Stopwords struct {
 
 type StringToStringFunc func(string) string
 type StringToStringSliceFunc func(string, []string) []string
+type StringSliceToIntSliceFunc func([]string, []int) []int
 type ProcFunc struct {
-	ToLower  StringToStringFunc
-	Replace  StringToStringFunc
-	GetWords StringToStringSliceFunc
+	ToLower     StringToStringFunc
+	Replace     StringToStringFunc
+	GetWords    StringToStringSliceFunc
+	WordsToInts StringSliceToIntSliceFunc
 }
+
+const (
+	MAX_NUM_WORDS_PER_DOC = 1024
+)
 
 func GenProcFunc(stopwords []string) *ProcFunc {
 
@@ -86,11 +92,36 @@ func GenProcFunc(stopwords []string) *ProcFunc {
 				wordMatches = append(wordMatches, match[1])
 			}
 
-			fmt.Printf("words: %#v\n", wordMatches)
+			if len(wordMatches) > MAX_NUM_WORDS_PER_DOC {
+				fmt.Printf("Too many words in doc (%d) !!", len(wordMatches))
+				os.Exit(-1)
+			}
+
 			return wordMatches
 		} else {
 			return nil
 		}
+	}
+
+	wordToInt := make(map[string]int)
+	IntToWord := make(map[int]string)
+	wordNum := 0
+	procFunc.WordsToInts = func(words []string, wordInts []int) []int {
+
+		wordInts = wordInts[:0]
+		for _, word := range words {
+			if _, ok := wordToInt[word]; ok == false {
+				wordToInt[word] = wordNum
+				IntToWord[wordNum] = word
+				wordInts = append(wordInts, wordNum)
+				wordNum += 1
+			} else {
+				wordInts = append(wordInts, wordToInt[word])
+			}
+
+		}
+
+		return wordInts
 	}
 
 	return &procFunc
@@ -158,7 +189,8 @@ func main() {
 	doc := &Doc{}
 	docNum := 0
 	var s string
-	words := make([]string, 1024)
+	words := make([]string, MAX_NUM_WORDS_PER_DOC)
+	wordInts := make([]int, MAX_NUM_WORDS_PER_DOC)
 
 	procFunc := GenProcFunc(stopwords.English)
 	for jsonDecoder.More() {
@@ -167,11 +199,14 @@ func main() {
 		} else if err != nil {
 			log.Fatal(err)
 		}
-		// fmt.Printf("%10v doc: %#v\n\n", docNum, doc)
+		fmt.Printf("%10v doc: %#v\n\n", docNum, doc)
 
 		s = procFunc.ToLower(doc.Text)
 		s = procFunc.Replace(s)
 		words = procFunc.GetWords(s, words)
+		fmt.Printf("words: %#v\n", words)
+		wordInts = procFunc.WordsToInts(words, wordInts)
+		fmt.Printf("wordInts: %#v\n", wordInts)
 		docNum += 1
 	}
 
