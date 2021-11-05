@@ -14,15 +14,15 @@ import (
 )
 
 type Doc struct {
-	DocId      string  `json: "review_id"`
-	UserId     string  `json: "user_id"`
-	BusinessId string  `json: "business_id"`
-	Stars      float32 `json: "stars"`
-	Useful     uint16  `json: "useful"`
-	Funny      uint16  `json: "funny"`
-	Cool       uint16  `json: "cool"`
-	Text       string  `json: "text"`
-	Date       string  `json: "date"`
+	DocId      string  `json:"review_id"`
+	UserId     string  `json:"user_id"`
+	BusinessId string  `json:"business_id"`
+	Stars      float32 `json:"stars"`
+	Useful     uint16  `json:"useful"`
+	Funny      uint16  `json:"funny"`
+	Cool       uint16  `json:"cool"`
+	Text       string  `json:"text"`
+	Date       string  `json:"date"`
 }
 
 type Config struct {
@@ -32,7 +32,7 @@ type Config struct {
 }
 
 type Stopwords struct {
-	EnglishStopwords []string `json: "english_stopwords"`
+	English []string `json:"english_stopwords"`
 }
 
 func process(doc *Doc, r *strings.Replacer, re *regexp.Regexp) *[]string {
@@ -56,6 +56,23 @@ func process(doc *Doc, r *strings.Replacer, re *regexp.Regexp) *[]string {
 	} else {
 		return nil
 	}
+}
+
+func getJson(fn *string, d interface{}) error {
+	fmt.Printf("Decoding JSON file: %s\n", *fn)
+	stopwordsFile, err := os.Open(*fn)
+	if err != nil {
+		fmt.Printf("Error opening stopwords file: %s, %s", fn, err)
+	}
+	defer stopwordsFile.Close()
+
+	jsonDecoder := json.NewDecoder(stopwordsFile)
+	if err := jsonDecoder.Decode(d); err != nil {
+		fmt.Printf("Error decoding file %s, %s\n", *fn, d)
+		os.Exit(-1)
+	}
+
+	return nil
 }
 
 func main() {
@@ -82,17 +99,14 @@ func main() {
 		fmt.Printf("Error decoding file %s", absConfigPath)
 		os.Exit(-1)
 	}
-	fmt.Printf("config: %#v", config)
+	fmt.Printf("config: %#v\n", config)
 
-	/*
-		filename := config.stopwordsFn
-		fmt.Printf("Stopwords filename: %s\n", filename)
-		stopwordsFile, err := os.Open(filename)
-		if err != nil {
-			fmt.Printf("Error opening stopwords file: %s, %s", filename, err)
-		}
-		defer stopwordsFile.Close()
-	*/
+	var stopwords Stopwords
+	if getJson(&config.StopwordsFn, &stopwords) != nil {
+		fmt.Printf("Error getting stopwords from file\n")
+		os.Exit(1)
+	}
+	fmt.Printf("stopwords.English: %#v\n", stopwords.English)
 
 	filename := config.RawDocumentsFn
 	fmt.Printf("Data filename: %s\n", filename)
@@ -103,11 +117,6 @@ func main() {
 	defer dataFile.Close()
 
 	jsonDecoder := json.NewDecoder(dataFile)
-	if jsonDecoder == nil {
-		fmt.Printf("Error getting new decoder for file: %s", filename)
-		os.Exit(-1)
-	}
-
 	doc := &Doc{}
 	docNum := 0
 
