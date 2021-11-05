@@ -35,27 +35,65 @@ type Stopwords struct {
 	English []string `json:"english_stopwords"`
 }
 
-func process(doc *Doc, r *strings.Replacer, re *regexp.Regexp) *[]string {
-	s := strings.ToLower(doc.Text)
-	s = r.Replace(s)
+type StringToStringFunc func(string) string
+type StringToStringSliceFunc func(string, []string) []string
+type ProcFunc struct {
+	ToLower  StringToStringFunc
+	Replace  StringToStringFunc
+	GetWords StringToStringSliceFunc
+}
 
-	matches := re.FindAllStringSubmatch(s, -1)
-	if matches != nil {
-		wordMatches := make([]string, len(matches))
-		matchNum := 0
-		for _, match := range matches {
-			if len(match) != 2 {
-				fmt.Printf("len(match) is %d which is invalid\n", len(match))
-				os.Exit(-1)
-			}
-			wordMatches[matchNum] = match[1]
-			matchNum += 1
-		}
+func GenProcFunc(stopwords []string) *ProcFunc {
 
-		return &wordMatches
-	} else {
-		return nil
+	var procFunc ProcFunc
+
+	// This character replacer replaces:
+	// an apostrophe ' with empty string,
+	// a underscore _ with space,
+	// and all other punctuation marks with space.
+	// We're also going to remove all numbers.
+	r := strings.NewReplacer("'", "", "_", " ", "!", " ",
+		"!", " ", "\"", " ", "#", " ", "$", " ",
+		"%", " ", "&", " ",
+		"(", " ", ")", " ", "*", " ", "+", " ",
+		",", " ", "-", " ", ".", " ", "/", " ",
+		":", " ", ";", " ", "<", " ", "=", " ",
+		">", " ", "?", " ", "@", " ", "[", " ",
+		"\\", " ", "]", " ", "^", " ",
+		"_", " ", "`", " ", "{", " ", "|", " ",
+		"}", " ", "~", " ",
+		"0", "", "1", "", "2", "", "3", "", "4", "",
+		"5", "", "6", "", "7", "", "8", "", "9", "")
+
+	procFunc.Replace = func(s string) string {
+		return r.Replace(s)
 	}
+
+	procFunc.ToLower = func(s string) string {
+		return strings.ToLower(s)
+	}
+
+	re := regexp.MustCompile(`(\w+)`)
+	procFunc.GetWords = func(s string, wordMatches []string) []string {
+		matches := re.FindAllStringSubmatch(s, -1)
+		if matches != nil {
+			wordMatches = wordMatches[:0]
+			for _, match := range matches {
+				if len(match) != 2 {
+					fmt.Printf("len(match) is %d which is invalid\n", len(match))
+					os.Exit(-1)
+				}
+				wordMatches = append(wordMatches, match[1])
+			}
+
+			fmt.Printf("words: %#v\n", wordMatches)
+			return wordMatches
+		} else {
+			return nil
+		}
+	}
+
+	return &procFunc
 }
 
 func getJson(fn *string, d interface{}) error {
@@ -119,24 +157,21 @@ func main() {
 	jsonDecoder := json.NewDecoder(dataFile)
 	doc := &Doc{}
 	docNum := 0
+	var s string
+	words := make([]string, 1024)
 
-	// isn't -> isnt
-	// solar_eclipse -> solar eclipse
-	// We also remove _ because it is a part of \w rexexp,
-	// and we don't want the whole "solar_eclipse" as a word.
-	// We're still ok with 0-9 being part of the word,
-	// although maybe that may change after some experience.
-	r := strings.NewReplacer("'", "", "_", " ")
-
-	re := regexp.MustCompile(`(\w+)`)
+	procFunc := GenProcFunc(stopwords.English)
 	for jsonDecoder.More() {
 		if err = jsonDecoder.Decode(doc); err == io.EOF {
 			break
 		} else if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("%10v doc: %#v\n\n", docNum, doc)
-		_ = process(doc, r, re)
+		// fmt.Printf("%10v doc: %#v\n\n", docNum, doc)
+
+		s = procFunc.ToLower(doc.Text)
+		s = procFunc.Replace(s)
+		words = procFunc.GetWords(s, words)
 		docNum += 1
 	}
 
