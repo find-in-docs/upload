@@ -31,6 +31,10 @@ type Config struct {
 	StopwordsFn    string `yaml:"stopwords-fn"`
 }
 
+type Stopwords struct {
+	EnglishStopwords []string `json: "english_stopwords"`
+}
+
 func process(doc *Doc, r *strings.Replacer, re *regexp.Regexp) *[]string {
 	s := strings.ToLower(doc.Text)
 	s = r.Replace(s)
@@ -80,6 +84,16 @@ func main() {
 	}
 	fmt.Printf("config: %#v", config)
 
+	/*
+		filename := config.stopwordsFn
+		fmt.Printf("Stopwords filename: %s\n", filename)
+		stopwordsFile, err := os.Open(filename)
+		if err != nil {
+			fmt.Printf("Error opening stopwords file: %s, %s", filename, err)
+		}
+		defer stopwordsFile.Close()
+	*/
+
 	filename := config.RawDocumentsFn
 	fmt.Printf("Data filename: %s\n", filename)
 	dataFile, err := os.Open(filename)
@@ -88,8 +102,8 @@ func main() {
 	}
 	defer dataFile.Close()
 
-	yamlDecoder := json.NewDecoder(dataFile)
-	if yamlDecoder == nil {
+	jsonDecoder := json.NewDecoder(dataFile)
+	if jsonDecoder == nil {
 		fmt.Printf("Error getting new decoder for file: %s", filename)
 		os.Exit(-1)
 	}
@@ -106,8 +120,8 @@ func main() {
 	r := strings.NewReplacer("'", "", "_", " ")
 
 	re := regexp.MustCompile(`(\w+)`)
-	for yamlDecoder.More() {
-		if err = yamlDecoder.Decode(doc); err == io.EOF {
+	for jsonDecoder.More() {
+		if err = jsonDecoder.Decode(doc); err == io.EOF {
 			break
 		} else if err != nil {
 			log.Fatal(err)
