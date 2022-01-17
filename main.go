@@ -1,18 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"log"
-	"os"
-	"path/filepath"
-	"regexp"
-	"strings"
 
-	"gopkg.in/yaml.v2"
+	"github.com/samirgadkari/search/config"
 )
 
+/*
 type Doc struct {
 	DocId      string  `json:"review_id"`
 	UserId     string  `json:"user_id"`
@@ -38,11 +32,13 @@ type Stopwords struct {
 type StringToStringFunc func(string) string
 type StringToStringSliceFunc func(string, []string) []string
 type StringSliceToIntSliceFunc func([]string, []int) []int
+type IntSliceWriteToFileFunc func(string, int, []int)
 type ProcFunc struct {
-	ToLower     StringToStringFunc
-	Replace     StringToStringFunc
-	GetWords    StringToStringSliceFunc
-	WordsToInts StringSliceToIntSliceFunc
+	ToLower       StringToStringFunc
+	Replace       StringToStringFunc
+	GetWords      StringToStringSliceFunc
+	WordsToInts   StringSliceToIntSliceFunc
+	WriteWordInts IntSliceWriteToFileFunc
 }
 
 const (
@@ -143,72 +139,11 @@ func getJson(fn *string, d interface{}) error {
 
 	return nil
 }
+*/
 
+// Test why config.LoadConfig is not getting exported.
 func main() {
 
-	workingDir, _ := os.Getwd()
-	fmt.Printf("pwd: %s\n", workingDir)
-
-	absConfigPath, _ := filepath.Abs("../../../config.yaml")
-	configFile, err := os.Open(absConfigPath)
-	if err != nil {
-		fmt.Printf("Error opening file: %s, %s", absConfigPath, err)
-		os.Exit(-1)
-	}
-	defer configFile.Close()
-
-	var config Config
-	decoder := yaml.NewDecoder(configFile)
-	if decoder == nil {
-		fmt.Printf("Error getting new decoder for file: %s", absConfigPath)
-		os.Exit(-1)
-	}
-
-	if err = decoder.Decode(&config); err != nil {
-		fmt.Printf("Error decoding file %s", absConfigPath)
-		os.Exit(-1)
-	}
-	fmt.Printf("config: %#v\n", config)
-
-	var stopwords Stopwords
-	if getJson(&config.StopwordsFn, &stopwords) != nil {
-		fmt.Printf("Error getting stopwords from file\n")
-		os.Exit(1)
-	}
-	fmt.Printf("stopwords.English: %#v\n", stopwords.English)
-
-	filename := config.RawDocumentsFn
-	fmt.Printf("Data filename: %s\n", filename)
-	dataFile, err := os.Open(filename)
-	if err != nil {
-		fmt.Printf("Error opening data file: %s, %s", filename, err)
-	}
-	defer dataFile.Close()
-
-	jsonDecoder := json.NewDecoder(dataFile)
-	doc := &Doc{}
-	docNum := 0
-	var s string
-	words := make([]string, MAX_NUM_WORDS_PER_DOC)
-	wordInts := make([]int, MAX_NUM_WORDS_PER_DOC)
-
-	procFunc := GenProcFunc(stopwords.English)
-	for jsonDecoder.More() {
-		if err = jsonDecoder.Decode(doc); err == io.EOF {
-			break
-		} else if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Printf("%10v doc: %#v\n\n", docNum, doc)
-
-		s = procFunc.ToLower(doc.Text)
-		s = procFunc.Replace(s)
-		words = procFunc.GetWords(s, words)
-		fmt.Printf("words: %#v\n", words)
-		wordInts = procFunc.WordsToInts(words, wordInts)
-		fmt.Printf("wordInts: %#v\n", wordInts)
-		docNum += 1
-	}
-
-	fmt.Printf("Number of docs: %d", docNum)
+	cfg := config.LoadConfig()
+	fmt.Printf("%#v", cfg)
 }
