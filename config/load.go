@@ -12,8 +12,7 @@ type Config struct {
 	OutputDir    string
 }
 
-// Why is this function not considered declared when this package is imported into main.go?
-func loadConfig() *Config {
+func LoadConfig() *Config {
 	config_filename := "config.yaml"
 
 	viper.SetConfigName("config")
