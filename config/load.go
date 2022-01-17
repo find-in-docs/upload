@@ -12,7 +12,7 @@ type Config struct {
 	OutputDir    string
 }
 
-func load_config() *Config {
+func LoadConfig() *Config {
 	config_filename := "config.yaml"
 
 	viper.SetConfigName("config")
