@@ -12,6 +12,9 @@ type Config struct {
 	OutputDir    string
 }
 
+func DebugIssueWithImportingFunction() {
+}
+
 // Why is this function not considered declared when this package is imported into main.go?
 func LoadConfig() *Config {
 	config_filename := "config.yaml"
