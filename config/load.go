@@ -31,7 +31,7 @@ func load_config() *Config {
 
 	var C Config
 	if err := viper.Unmarshal(&C); err != nil {
-		panic(fmt.Errorf("Fatal error unmarshaling config file %s.\n", config_filename)
+		panic(fmt.Errorf("Fatal error unmarshaling config file %s.\n", config_filename))
 	}
 
 	return &C
