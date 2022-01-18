@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"regexp"
+	"strings"
 
 	"github.com/samirgadkari/search/pkg/config"
 )
 
-/*
 type Doc struct {
 	DocId      string  `json:"review_id"`
 	UserId     string  `json:"user_id"`
@@ -123,27 +125,11 @@ func GenProcFunc(stopwords []string) *ProcFunc {
 	return &procFunc
 }
 
-func getJson(fn *string, d interface{}) error {
-	fmt.Printf("Decoding JSON file: %s\n", *fn)
-	stopwordsFile, err := os.Open(*fn)
-	if err != nil {
-		fmt.Printf("Error opening stopwords file: %s, %s", fn, err)
-	}
-	defer stopwordsFile.Close()
-
-	jsonDecoder := json.NewDecoder(stopwordsFile)
-	if err := jsonDecoder.Decode(d); err != nil {
-		fmt.Printf("Error decoding file %s, %s\n", *fn, d)
-		os.Exit(-1)
-	}
-
-	return nil
-}
-*/
-
-// Test why config.LoadConfig is not getting exported.
 func main() {
 
 	cfg := config.LoadConfig()
-	fmt.Printf("%#v", cfg)
+	fmt.Printf("%#v\n", cfg)
+
+	stopWords := config.LoadStopwords(cfg)
+	fmt.Println(stopWords)
 }
