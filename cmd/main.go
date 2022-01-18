@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/samirgadkari/search/pkg/config"
+	"github.com/samirgadkari/search/pkg/data"
 )
 
 type Doc struct {
@@ -132,4 +133,22 @@ func main() {
 
 	stopWords := config.LoadStopwords(cfg)
 	fmt.Println(stopWords)
+
+	done := make(chan struct{})
+	in := make(chan string, 100)
+	data.LoadData(&cfg.DataFile, in, done)
+
+	var line string
+LOOP:
+	for {
+		select {
+		case line = <-in:
+			if len(line) > 0 {
+				fmt.Println(line)
+			}
+
+		case <-done:
+			break LOOP
+		}
+	}
 }
