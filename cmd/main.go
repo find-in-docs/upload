@@ -134,10 +134,7 @@ func main() {
 	stopWords := config.LoadStopwords(cfg)
 	fmt.Println(stopWords)
 
-	done := make(chan struct{})
-	in := make(chan string, 100)
-	data.LoadData(&cfg.DataFile, in, done)
-
+	in, done := data.LoadData(&cfg.DataFile)
 	var line string
 LOOP:
 	for {
