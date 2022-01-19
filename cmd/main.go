@@ -45,7 +45,7 @@ type ProcFunc struct {
 }
 
 const (
-	MAX_NUM_WORDS_PER_DOC = 1024
+	maxWordsPerDoc = 1024
 )
 
 func GenProcFunc(stopwords []string) *ProcFunc {
@@ -91,7 +91,7 @@ func GenProcFunc(stopwords []string) *ProcFunc {
 				wordMatches = append(wordMatches, match[1])
 			}
 
-			if len(wordMatches) > MAX_NUM_WORDS_PER_DOC {
+			if len(wordMatches) > maxWordsPerDoc {
 				fmt.Printf("Too many words in doc (%d) !!", len(wordMatches))
 				os.Exit(-1)
 			}
@@ -134,13 +134,23 @@ func main() {
 	stopWords := config.LoadStopwords(cfg)
 	fmt.Println(stopWords)
 
+	proc := GenProcFunc(stopWords)
+
 	in, done := data.LoadData(&cfg.DataFile)
+	words := make([]string, maxWordsPerDoc)
+	wordInts := make([]int, maxWordsPerDoc)
 	var line string
 LOOP:
 	for {
 		select {
 		case line = <-in:
-			fmt.Println(line)
+			line = proc.Replace(line)
+			line = proc.ToLower(line)
+			words = proc.GetWords(line, words)
+			wordInts = proc.WordsToInts(words, wordInts)
+			fmt.Println(wordInts)
+			// type IntSliceWriteToFileFunc func(string, int, []int)
+			// WriteWordInts IntSliceWriteToFileFunc
 		case <-done:
 			break LOOP
 		}
