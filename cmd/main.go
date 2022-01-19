@@ -140,10 +140,7 @@ LOOP:
 	for {
 		select {
 		case line = <-in:
-			if len(line) > 0 {
-				fmt.Println(line)
-			}
-
+			fmt.Println(line)
 		case <-done:
 			break LOOP
 		}

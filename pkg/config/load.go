@@ -8,7 +8,7 @@ import (
 
 type Config struct {
 	OriginalFile         string
-	DataDir              string
+	DataFile             string
 	EnglishStopwordsFile string
 	OutputDir            string
 }
