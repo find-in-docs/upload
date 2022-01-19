@@ -8,18 +8,6 @@ import (
 	"github.com/samirgadkari/search/pkg/transform"
 )
 
-type Doc struct {
-	DocId      string  `json:"review_id"`
-	UserId     string  `json:"user_id"`
-	BusinessId string  `json:"business_id"`
-	Stars      float32 `json:"stars"`
-	Useful     uint16  `json:"useful"`
-	Funny      uint16  `json:"funny"`
-	Cool       uint16  `json:"cool"`
-	Text       string  `json:"text"`
-	Date       string  `json:"date"`
-}
-
 type Config struct {
 	RawDocumentsFn string `yaml:"raw-documents-fn"`
 	OutputDirFn    string `yaml:"output-dir-fn"`
