@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/samirgadkari/search/pkg/config"
 	"github.com/samirgadkari/search/pkg/transform"
@@ -37,5 +38,6 @@ func main() {
 	stopWords := config.LoadStopwords(cfg)
 	fmt.Println(stopWords)
 
-	transform.WordsToInts(stopWords, &cfg.DataFile)
+	transform.WordsToInts(stopWords, cfg.DataFile,
+		filepath.Join(cfg.OutputDir, cfg.WordIntsFile))
 }
