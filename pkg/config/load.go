@@ -11,6 +11,7 @@ type Config struct {
 	DataFile             string
 	EnglishStopwordsFile string
 	OutputDir            string
+	WordIntsFile         string
 }
 
 func LoadConfig() *Config {
