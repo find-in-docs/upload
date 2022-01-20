@@ -12,16 +12,12 @@ import (
 	"github.com/samirgadkari/search/pkg/data"
 )
 
-type StringToStringFunc func(string) string
-type StringToStringSliceFunc func(string, []string) []string
-type StringSliceToIntSliceFunc func([]string, []int) []int
-type IntSliceWriteToFileFunc func(string, int, []int)
 type ProcFunc struct {
-	ToLower              StringToStringFunc
-	Replace              StringToStringFunc
-	GetWords             StringToStringSliceFunc
-	WordsToInts          StringSliceToIntSliceFunc
-	WriteWordInts        IntSliceWriteToFileFunc
+	ToLower              func(string) string
+	Replace              func(string) string
+	GetWords             func(string, []string) []string
+	WordsToInts          func([]string, []int) []int
+	WriteWordInts        func(string, int, []int)
 	WriteWordIntMappings func(string)
 	RemoveStopwords      func([]string) []string
 }
