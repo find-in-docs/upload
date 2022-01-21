@@ -1,5 +1,5 @@
 /*
-Copyright © 2022 NAME HERE <EMAIL ADDRESS>
+Copyright © 2022 Samir Gadkari
 
 */
 package cmd
@@ -7,21 +7,36 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/samirgadkari/search/pkg/config"
+	"github.com/samirgadkari/search/pkg/transform"
 	"github.com/spf13/cobra"
 )
 
 // importCmd represents the import command
 var importCmd = &cobra.Command{
 	Use:   "import",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Import documents from the given file",
+	Long: `Specify a file with documents in JSON object form.
+If it is a list of documents, don't include the [] list specifiers. ex:
+{"review_id": 1, "text": "User review for ID 1"}
+{"review_id": 2, "text": "User review for ID 2"}`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("import called")
+		fmt.Printf("import called %v\n", args)
+		cfg := config.LoadConfig()
+		fmt.Printf("%#v\n", cfg)
+
+		stopWords := config.LoadStopwords(cfg)
+		fmt.Println(stopWords)
+
+		var dataFile string
+		if len(args) == 0 {
+			dataFile = cfg.DataFile
+		} else {
+			dataFile = args[0]
+		}
+
+		transform.WordsToInts(stopWords, dataFile,
+			cfg.OutputDir, cfg.WordIntsFile)
 	},
 }
 
