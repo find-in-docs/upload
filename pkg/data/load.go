@@ -3,7 +3,6 @@ package data
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -65,7 +64,6 @@ func LoadData(dataFile string) (<-chan string, <-chan struct{}) {
 	var doc Doc
 
 	go func() {
-		fmt.Println("In LoadData")
 		f, err := os.Open(dataFile)
 		defer f.Close()
 

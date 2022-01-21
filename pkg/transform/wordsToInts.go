@@ -214,6 +214,10 @@ LOOP:
 	for {
 		select {
 		case line = <-in:
+			if len(line) == 0 {
+				continue
+			}
+
 			line = proc.Replace(line)
 			line = proc.ToLower(line)
 			words = proc.GetWords(line, words)
@@ -222,7 +226,9 @@ LOOP:
 			fmt.Println(wordInts)
 			bw.WriteString(fmt.Sprintf("%v\n", wordInts))
 		case <-done:
-			break LOOP
+			if len(in) == 0 {
+				break LOOP
+			}
 		}
 	}
 
