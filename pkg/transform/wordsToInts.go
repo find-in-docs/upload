@@ -12,16 +12,12 @@ import (
 	"github.com/samirgadkari/search/pkg/data"
 )
 
-type StringToStringFunc func(string) string
-type StringToStringSliceFunc func(string, []string) []string
-type StringSliceToIntSliceFunc func([]string, []int) []int
-type IntSliceWriteToFileFunc func(string, int, []int)
 type ProcFunc struct {
-	ToLower              StringToStringFunc
-	Replace              StringToStringFunc
-	GetWords             StringToStringSliceFunc
-	WordsToInts          StringSliceToIntSliceFunc
-	WriteWordInts        IntSliceWriteToFileFunc
+	ToLower              func(string) string
+	Replace              func(string) string
+	GetWords             func(string, []string) []string
+	WordsToInts          func([]string, []int) []int
+	WriteWordInts        func(string, int, []int)
 	WriteWordIntMappings func(string)
 	RemoveStopwords      func([]string) []string
 }
@@ -32,10 +28,7 @@ const (
 	intToWordFilename = "intToWord.txt"
 )
 
-func GenProcFunc(stopwords []string) *ProcFunc {
-
-	var procFunc ProcFunc
-
+func replacer(s string) string {
 	// This character replacer replaces:
 	// an apostrophe ' with empty string,
 	// a underscore _ with space,
@@ -54,16 +47,14 @@ func GenProcFunc(stopwords []string) *ProcFunc {
 		"0", "", "1", "", "2", "", "3", "", "4", "",
 		"5", "", "6", "", "7", "", "8", "", "9", "")
 
-	procFunc.Replace = func(s string) string {
-		return r.Replace(s)
-	}
+	return r.Replace(s)
+}
 
-	procFunc.ToLower = func(s string) string {
-		return strings.ToLower(s)
-	}
+func getWordsFn() func(string, []string) []string {
 
 	re := regexp.MustCompile(`(\w+)`)
-	procFunc.GetWords = func(s string, wordMatches []string) []string {
+
+	return func(s string, wordMatches []string) []string {
 		matches := re.FindAllStringSubmatch(s, -1)
 		if matches != nil {
 			wordMatches = wordMatches[:0]
@@ -85,13 +76,16 @@ func GenProcFunc(stopwords []string) *ProcFunc {
 			return nil
 		}
 	}
+}
+
+func removeStopwordsFn(stopwords []string) func([]string) []string {
 
 	swMap := make(map[string]struct{}, len(stopwords))
 	for _, v := range stopwords {
 		swMap[v] = struct{}{}
 	}
 
-	procFunc.RemoveStopwords = func(words []string) []string {
+	return func(words []string) []string {
 
 		var result []string
 		for _, word := range words {
@@ -103,11 +97,14 @@ func GenProcFunc(stopwords []string) *ProcFunc {
 
 		return result
 	}
+}
+
+func wordToIntsFn() func([]string, []int) []int {
 
 	wordToInt := make(map[string]int)
 	intToWord := make(map[int]string)
 	wordNum := 0
-	procFunc.WordsToInts = func(words []string, wordInts []int) []int {
+	return func(words []string, wordInts []int) []int {
 
 		wordInts = wordInts[:0]
 		for _, word := range words {
@@ -124,8 +121,14 @@ func GenProcFunc(stopwords []string) *ProcFunc {
 
 		return wordInts
 	}
+}
 
-	procFunc.WriteWordIntMappings = func(outputDir string) {
+func WriteWordIntMappingsFn() func(string) {
+
+	wordToInt := make(map[string]int)
+	intToWord := make(map[int]string)
+
+	return func(outputDir string) {
 
 		wordToIntFn := filepath.Join(outputDir, wordToIntFilename)
 		wordToIntF, err := os.OpenFile(wordToIntFn, os.O_CREATE|os.O_WRONLY, 0755)
@@ -163,7 +166,23 @@ func GenProcFunc(stopwords []string) *ProcFunc {
 			os.Exit(-1)
 		}
 	}
+}
 
+func GenProcFunc(stopwords []string) *ProcFunc {
+
+	var procFunc ProcFunc
+
+	procFunc.Replace = replacer
+
+	procFunc.ToLower = func(s string) string {
+		return strings.ToLower(s)
+	}
+
+	procFunc.GetWords = getWordsFn()
+	procFunc.RemoveStopwords = removeStopwordsFn(stopwords)
+	procFunc.WordsToInts = wordToIntsFn()
+
+	procFunc.WriteWordIntMappings = WriteWordIntMappingsFn()
 	return &procFunc
 }
 
@@ -195,6 +214,10 @@ LOOP:
 	for {
 		select {
 		case line = <-in:
+			if len(line) == 0 {
+				continue
+			}
+
 			line = proc.Replace(line)
 			line = proc.ToLower(line)
 			words = proc.GetWords(line, words)
@@ -203,7 +226,9 @@ LOOP:
 			fmt.Println(wordInts)
 			bw.WriteString(fmt.Sprintf("%v\n", wordInts))
 		case <-done:
-			break LOOP
+			if len(in) == 0 {
+				break LOOP
+			}
 		}
 	}
 

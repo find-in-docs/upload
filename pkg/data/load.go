@@ -3,11 +3,12 @@ package data
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
+	"strings"
 )
 
+// re := `^.*?\"text\"\:\"(.*?)\"`
 type Doc struct {
 	DocId      string  `json:"review_id"`
 	UserId     string  `json:"user_id"`
@@ -20,21 +21,41 @@ type Doc struct {
 	Date       string  `json:"date"`
 }
 
-func getJson(fn *string, d interface{}) error {
-	fmt.Printf("Decoding JSON file: %s\n", *fn)
-	stopwordsFile, err := os.Open(*fn)
-	if err != nil {
-		fmt.Printf("Error opening stopwords file: %s, %s", fn, err)
-	}
-	defer stopwordsFile.Close()
-
-	jsonDecoder := json.NewDecoder(stopwordsFile)
-	if err := jsonDecoder.Decode(d); err != nil {
-		fmt.Printf("Error decoding file %s, %s\n", *fn, d)
-		os.Exit(-1)
+func splitData(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
 	}
 
-	return nil
+	if i := strings.Index(string(data), "}\n{"); i >= 0 {
+
+		// Received partial JSON, tell caller to give us more data.
+		firstRightBraceIndex := strings.Index(string(data), "}")
+		if firstRightBraceIndex == -1 {
+			return 0, nil, nil
+		}
+
+		secondLocation :=
+			strings.Index(string(data[firstRightBraceIndex+1:]), "}")
+		secondRightBraceIndex := secondLocation
+		if secondLocation > 0 {
+			secondRightBraceIndex = firstRightBraceIndex + secondLocation
+		}
+
+		if len(string(data)) > firstRightBraceIndex {
+			if secondRightBraceIndex != -1 {
+				return i + 1, data[:i+1], nil
+			} else {
+				return 0, nil, nil
+			}
+		}
+		return i + 1, data[:i+1], nil
+	}
+
+	if atEOF {
+		return len(data), data, nil
+	}
+
+	return
 }
 
 func LoadData(dataFile string) (<-chan string, <-chan struct{}) {
@@ -43,7 +64,6 @@ func LoadData(dataFile string) (<-chan string, <-chan struct{}) {
 	var doc Doc
 
 	go func() {
-		fmt.Println("In LoadData")
 		f, err := os.Open(dataFile)
 		defer f.Close()
 
@@ -53,7 +73,8 @@ func LoadData(dataFile string) (<-chan string, <-chan struct{}) {
 		}
 
 		s := bufio.NewScanner(f)
-		s.Split(bufio.ScanLines)
+
+		s.Split(splitData)
 
 		for s.Scan() {
 			line := s.Text()
