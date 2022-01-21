@@ -214,6 +214,9 @@ LOOP:
 	for {
 		select {
 		case line = <-in:
+
+			// Sometimes, we get 0-length line. Not sure why,
+			// but we can get around that issue by ignoring them.
 			if len(line) == 0 {
 				continue
 			}
