@@ -39,7 +39,7 @@ func splitData(data []byte, atEOF bool) (advance int, token []byte, err error) {
 
 func LoadData(dataFile string) (<-chan string, <-chan struct{}) {
 	done := make(chan struct{})
-	in := make(chan string, 100)
+	in := make(chan string)
 	var doc Doc
 
 	go func() {
