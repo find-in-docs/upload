@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 )
 
+// re := `^.*?\"text\"\:\"(.*?)\"`
 type Doc struct {
 	DocId      string  `json:"review_id"`
 	UserId     string  `json:"user_id"`
@@ -37,6 +39,43 @@ func getJson(fn *string, d interface{}) error {
 	return nil
 }
 
+func splitData(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+
+	if i := strings.Index(string(data), "}\n{"); i >= 0 {
+
+		// Received partial JSON, tell caller to give us more data.
+		firstRightBraceIndex := strings.Index(string(data), "}")
+		if firstRightBraceIndex == -1 {
+			return 0, nil, nil
+		}
+
+		secondLocation :=
+			strings.Index(string(data[firstRightBraceIndex+1:]), "}")
+		secondRightBraceIndex := secondLocation
+		if secondLocation > 0 {
+			secondRightBraceIndex = firstRightBraceIndex + secondLocation
+		}
+
+		if len(string(data)) > firstRightBraceIndex {
+			if secondRightBraceIndex != -1 {
+				return i + 1, data[:i+1], nil
+			} else {
+				return 0, nil, nil
+			}
+		}
+		return i + 1, data[:i+1], nil
+	}
+
+	if atEOF {
+		return len(data), data, nil
+	}
+
+	return
+}
+
 func LoadData(dataFile string) (<-chan string, <-chan struct{}) {
 	done := make(chan struct{})
 	in := make(chan string, 100)
@@ -53,7 +92,8 @@ func LoadData(dataFile string) (<-chan string, <-chan struct{}) {
 		}
 
 		s := bufio.NewScanner(f)
-		s.Split(bufio.ScanLines)
+
+		s.Split(splitData)
 
 		for s.Scan() {
 			line := s.Text()
