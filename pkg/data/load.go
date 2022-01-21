@@ -8,7 +8,6 @@ import (
 	"strings"
 )
 
-// re := `^.*?\"text\"\:\"(.*?)\"`
 type Doc struct {
 	DocId      string  `json:"review_id"`
 	UserId     string  `json:"user_id"`
@@ -26,36 +25,16 @@ func splitData(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		return 0, nil, nil
 	}
 
-	if i := strings.Index(string(data), "}\n{"); i >= 0 {
-
-		// Received partial JSON, tell caller to give us more data.
-		firstRightBraceIndex := strings.Index(string(data), "}")
-		if firstRightBraceIndex == -1 {
-			return 0, nil, nil
-		}
-
-		secondLocation :=
-			strings.Index(string(data[firstRightBraceIndex+1:]), "}")
-		secondRightBraceIndex := secondLocation
-		if secondLocation > 0 {
-			secondRightBraceIndex = firstRightBraceIndex + secondLocation
-		}
-
-		if len(string(data)) > firstRightBraceIndex {
-			if secondRightBraceIndex != -1 {
-				return i + 1, data[:i+1], nil
-			} else {
-				return 0, nil, nil
-			}
-		}
-		return i + 1, data[:i+1], nil
+	dataString := string(data)
+	if i := strings.Index(dataString, "}"); i >= 0 {
+		return i + 2, data[:i+2], nil
 	}
 
 	if atEOF {
 		return len(data), data, nil
 	}
 
-	return
+	return 0, nil, nil
 }
 
 func LoadData(dataFile string) (<-chan string, <-chan struct{}) {
