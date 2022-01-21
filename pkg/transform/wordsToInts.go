@@ -219,7 +219,6 @@ LOOP:
 			out <- wordInts
 		case <-done:
 			if len(in) == 0 {
-				fmt.Println("Closing out channel")
 				close(out)
 				break LOOP
 			}
