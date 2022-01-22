@@ -98,73 +98,67 @@ func removeStopwordsFn(stopwords []string) func([]string) []string {
 	}
 }
 
-func wordToIntsFn() func([]string, []int) []int {
+func wordToIntsFns() (func([]string, []int) []int, func(string)) {
 
 	wordToInt := make(map[string]int)
 	intToWord := make(map[int]string)
 	wordNum := 0
 	return func(words []string, wordInts []int) []int {
 
-		wordInts = wordInts[:0]
-		for _, word := range words {
-			if _, ok := wordToInt[word]; ok == false {
-				wordToInt[word] = wordNum
-				intToWord[wordNum] = word
-				wordInts = append(wordInts, wordNum)
-				wordNum += 1
-			} else {
-				wordInts = append(wordInts, wordToInt[word])
+			wordInts = wordInts[:0]
+			for _, word := range words {
+				if _, ok := wordToInt[word]; ok == false {
+					wordToInt[word] = wordNum
+					intToWord[wordNum] = word
+					wordInts = append(wordInts, wordNum)
+					wordNum += 1
+				} else {
+					wordInts = append(wordInts, wordToInt[word])
+				}
+
 			}
 
+			return wordInts
+		}, func(outputDir string) {
+
+			wordToIntFn := filepath.Join(outputDir, wordToIntFilename)
+			wordToIntF, err := os.Create(wordToIntFn)
+			if err != nil {
+				fmt.Printf("Error opening file %s: %v\n", wordToIntFn, err)
+				os.Exit(-1)
+			}
+			defer wordToIntF.Close()
+
+			intToWordFn := filepath.Join(outputDir, intToWordFilename)
+			intToWordF, err := os.Create(intToWordFn)
+			if err != nil {
+				fmt.Printf("Error opening file %s: %v\n", intToWordFn, err)
+				os.Exit(-1)
+			}
+			defer intToWordF.Close()
+
+			wordToIntBytes, err := json.Marshal(wordToInt)
+			if err != nil {
+				fmt.Printf("Error marshalling word to int\n")
+				os.Exit(-1)
+			}
+
+			intToWordBytes, err := json.Marshal(intToWord)
+			if err != nil {
+				fmt.Printf("Error marshalling int to word\n")
+				os.Exit(-1)
+			}
+
+			if _, err := wordToIntF.Write(wordToIntBytes); err != nil {
+				fmt.Printf("Error writing to file %s: %v\n", wordToIntFn, err)
+				os.Exit(-1)
+			}
+
+			if _, err := intToWordF.Write(intToWordBytes); err != nil {
+				fmt.Printf("Error writing to file %s: %v\n", intToWordFn, err)
+				os.Exit(-1)
+			}
 		}
-
-		return wordInts
-	}
-}
-
-func WriteWordIntMappingsFn() func(string) {
-
-	wordToInt := make(map[string]int)
-	intToWord := make(map[int]string)
-
-	return func(outputDir string) {
-
-		wordToIntFn := filepath.Join(outputDir, wordToIntFilename)
-		wordToIntF, err := os.OpenFile(wordToIntFn, os.O_CREATE|os.O_WRONLY, 0755)
-		if err != nil {
-			fmt.Printf("Error opening file %s: %v\n", wordToIntFn, err)
-			os.Exit(-1)
-		}
-
-		intToWordFn := filepath.Join(outputDir, intToWordFilename)
-		intToWordF, err := os.OpenFile(intToWordFn, os.O_CREATE|os.O_WRONLY, 0755)
-		if err != nil {
-			fmt.Printf("Error opening file %s: %v\n", intToWordFn, err)
-			os.Exit(-1)
-		}
-
-		wordToIntBytes, err := json.Marshal(wordToInt)
-		if err != nil {
-			fmt.Printf("Error marshalling word to int\n")
-			os.Exit(-1)
-		}
-
-		intToWordBytes, err := json.Marshal(intToWord)
-		if err != nil {
-			fmt.Printf("Error marshalling word to int\n")
-			os.Exit(-1)
-		}
-
-		if _, err := wordToIntF.Write(wordToIntBytes); err != nil {
-			fmt.Printf("Error writing to file %s: %v\n", wordToIntFn, err)
-			os.Exit(-1)
-		}
-
-		if _, err := intToWordF.Write(intToWordBytes); err != nil {
-			fmt.Printf("Error writing to file %s: %v\n", intToWordFn, err)
-			os.Exit(-1)
-		}
-	}
 }
 
 func GenProcFunc(stopwords []string) *ProcFunc {
@@ -179,9 +173,8 @@ func GenProcFunc(stopwords []string) *ProcFunc {
 
 	procFunc.GetWords = getWordsFn()
 	procFunc.RemoveStopwords = removeStopwordsFn(stopwords)
-	procFunc.WordsToInts = wordToIntsFn()
+	procFunc.WordsToInts, procFunc.WriteWordIntMappings = wordToIntsFns()
 
-	procFunc.WriteWordIntMappings = WriteWordIntMappingsFn()
 	return &procFunc
 }
 
