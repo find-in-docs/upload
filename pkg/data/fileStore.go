@@ -18,12 +18,12 @@ func StoreDataOnDisk(outputDir string, wordIntsFn string, in <-chan []int) {
 		}
 		defer f.Close() // This defer is first, so it will run last
 
-		bw := bufio.NewWriterSize(f, 256)
+		bw := bufio.NewWriter(f)
 		if bw == nil {
 			fmt.Printf("Error creating new buffered writer\n")
 			os.Exit(-1)
 		}
-		defer bw.Flush() // This defer is second, so it will run first
+		defer bw.Flush() // This defer is last, so it will run first
 
 		for wordInts := range in {
 
