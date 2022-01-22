@@ -3,6 +3,7 @@ package data
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -37,7 +38,7 @@ func splitData(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	return 0, nil, nil
 }
 
-func LoadData(dataFile string) (<-chan string, <-chan struct{}) {
+func LoadDocFn(dataFile string) func() (*string, bool) {
 	done := make(chan struct{})
 	in := make(chan string)
 	var doc Doc
@@ -57,6 +58,7 @@ func LoadData(dataFile string) (<-chan string, <-chan struct{}) {
 
 		for s.Scan() {
 			line := s.Text()
+			fmt.Printf("--line: %s\n", line)
 			if err := json.Unmarshal([]byte(line), &doc); err != nil {
 				log.Fatalf("Error unmarshalling data: %s\n", line)
 				os.Exit(-1)
@@ -69,5 +71,12 @@ func LoadData(dataFile string) (<-chan string, <-chan struct{}) {
 		close(done)
 	}()
 
-	return in, done
+	return func() (*string, bool) {
+		line, ok := <-in
+		// fmt.Printf("ok: %t, Got line: %d\n", ok, len(line))
+		if !ok {
+			return nil, ok
+		}
+		return &line, ok
+	}
 }
