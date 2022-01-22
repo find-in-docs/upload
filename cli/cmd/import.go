@@ -5,8 +5,6 @@ Copyright © 2022 Samir Gadkari
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/samirgadkari/search/pkg/config"
 	"github.com/samirgadkari/search/pkg/transform"
 	"github.com/spf13/cobra"
@@ -21,12 +19,9 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 {"review_id": 1, "text": "User review for ID 1"}
 {"review_id": 2, "text": "User review for ID 2"}`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("import called %v\n", args)
 		cfg := config.LoadConfig()
-		fmt.Printf("%#v\n", cfg)
 
 		stopWords := config.LoadStopwords(cfg)
-		fmt.Println(stopWords)
 
 		var dataFile string
 		if len(args) == 0 {

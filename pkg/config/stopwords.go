@@ -7,7 +7,6 @@ import (
 )
 
 func getJson(fn *string, d interface{}) error {
-	fmt.Printf("Decoding JSON file: %s\n", *fn)
 	stopwordsFile, err := os.Open(*fn)
 	if err != nil {
 		fmt.Printf("Error opening stopwords file: %v, %s", fn, err)
