@@ -183,16 +183,15 @@ func WordsToInts(stopWords []string, dataFilename string,
 
 	proc := GenProcFunc(stopWords)
 
-	out := make(chan []int)
-	data.StoreDataOnDisk(outputDir, wordIntsFn, out)
+	storeData, closeData := data.StoreDataOnDisk(outputDir, wordIntsFn)
 
-	load := data.LoadDocFn(dataFilename)
+	loadData := data.LoadDocFn(dataFilename)
 	words := make([]string, maxWordsPerDoc)
 	wordInts := make([]int, maxWordsPerDoc)
 	var line string
 
 	for {
-		v, ok := load()
+		v, ok := loadData()
 		if !ok {
 			break
 		}
@@ -211,10 +210,9 @@ func WordsToInts(stopWords []string, dataFilename string,
 		words = proc.RemoveStopwords(words)
 		wordInts = proc.WordsToInts(words, wordInts)
 
-		out <- wordInts
+		storeData(wordInts)
 	}
 
-	close(out)
-
+	closeData()
 	proc.WriteWordIntMappings(outputDir)
 }
