@@ -3,7 +3,6 @@ package data
 import (
 	"bufio"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -58,7 +57,6 @@ func LoadDocFn(dataFile string) func() (*string, bool) {
 
 		for s.Scan() {
 			line := s.Text()
-			fmt.Printf("--line: %s\n", line)
 			if err := json.Unmarshal([]byte(line), &doc); err != nil {
 				log.Fatalf("Error unmarshalling data: %s\n", line)
 				os.Exit(-1)

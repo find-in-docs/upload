@@ -217,11 +217,9 @@ func WordsToInts(stopWords []string, dataFilename string,
 		words = proc.GetWords(line, words)
 		words = proc.RemoveStopwords(words)
 		wordInts = proc.WordsToInts(words, wordInts)
-		fmt.Printf("--- %v\n", wordInts)
 
 		out <- wordInts
 	}
-	fmt.Printf("Finished loading\n")
 
 	close(out)
 
