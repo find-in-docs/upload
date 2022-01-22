@@ -193,37 +193,37 @@ func WordsToInts(stopWords []string, dataFilename string,
 	out := make(chan []int)
 	data.StoreDataOnDisk(outputDir, wordIntsFn, out)
 
-	in, done := data.LoadData(dataFilename)
+	load := data.LoadDocFn(dataFilename)
 	words := make([]string, maxWordsPerDoc)
 	wordInts := make([]int, maxWordsPerDoc)
 	var line string
-LOOP:
+
 	for {
-		select {
-		case line = <-in:
-
-			// Sometimes, we get 0-length line. Not sure why,
-			// but we can get around that issue by ignoring them.
-			// Need to debug this though !!
-			if len(line) == 0 {
-				continue
-			}
-
-			line = proc.Replace(line)
-			line = proc.ToLower(line)
-			words = proc.GetWords(line, words)
-			words = proc.RemoveStopwords(words)
-			wordInts = proc.WordsToInts(words, wordInts)
-			fmt.Println(wordInts)
-
-			out <- wordInts
-		case <-done:
-			if len(in) == 0 {
-				close(out)
-				break LOOP
-			}
+		v, ok := load()
+		if !ok {
+			break
 		}
+		line = *v
+
+		// Sometimes, we get 0-length line. Not sure why,
+		// but we can get around that issue by ignoring them.
+		// Need to debug this though !!
+		if len(line) == 0 {
+			continue
+		}
+
+		line = proc.Replace(line)
+		line = proc.ToLower(line)
+		words = proc.GetWords(line, words)
+		words = proc.RemoveStopwords(words)
+		wordInts = proc.WordsToInts(words, wordInts)
+		fmt.Printf("--- %v\n", wordInts)
+
+		out <- wordInts
 	}
+	fmt.Printf("Finished loading\n")
+
+	close(out)
 
 	proc.WriteWordIntMappings(outputDir)
 }
