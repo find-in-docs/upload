@@ -3,12 +3,12 @@ package data
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"strings"
 )
 
-// re := `^.*?\"text\"\:\"(.*?)\"`
 type Doc struct {
 	DocId      string  `json:"review_id"`
 	UserId     string  `json:"user_id"`
@@ -26,41 +26,21 @@ func splitData(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		return 0, nil, nil
 	}
 
-	if i := strings.Index(string(data), "}\n{"); i >= 0 {
-
-		// Received partial JSON, tell caller to give us more data.
-		firstRightBraceIndex := strings.Index(string(data), "}")
-		if firstRightBraceIndex == -1 {
-			return 0, nil, nil
-		}
-
-		secondLocation :=
-			strings.Index(string(data[firstRightBraceIndex+1:]), "}")
-		secondRightBraceIndex := secondLocation
-		if secondLocation > 0 {
-			secondRightBraceIndex = firstRightBraceIndex + secondLocation
-		}
-
-		if len(string(data)) > firstRightBraceIndex {
-			if secondRightBraceIndex != -1 {
-				return i + 1, data[:i+1], nil
-			} else {
-				return 0, nil, nil
-			}
-		}
-		return i + 1, data[:i+1], nil
+	dataString := string(data)
+	if i := strings.Index(dataString, "}"); i >= 0 {
+		return i + 2, data[:i+2], nil
 	}
 
 	if atEOF {
 		return len(data), data, nil
 	}
 
-	return
+	return 0, nil, nil
 }
 
-func LoadData(dataFile string) (<-chan string, <-chan struct{}) {
+func LoadDocFn(dataFile string) func() (*string, bool) {
 	done := make(chan struct{})
-	in := make(chan string, 100)
+	in := make(chan string)
 	var doc Doc
 
 	go func() {
@@ -78,6 +58,7 @@ func LoadData(dataFile string) (<-chan string, <-chan struct{}) {
 
 		for s.Scan() {
 			line := s.Text()
+			fmt.Printf("--line: %s\n", line)
 			if err := json.Unmarshal([]byte(line), &doc); err != nil {
 				log.Fatalf("Error unmarshalling data: %s\n", line)
 				os.Exit(-1)
@@ -90,5 +71,12 @@ func LoadData(dataFile string) (<-chan string, <-chan struct{}) {
 		close(done)
 	}()
 
-	return in, done
+	return func() (*string, bool) {
+		line, ok := <-in
+		// fmt.Printf("ok: %t, Got line: %d\n", ok, len(line))
+		if !ok {
+			return nil, ok
+		}
+		return &line, ok
+	}
 }
