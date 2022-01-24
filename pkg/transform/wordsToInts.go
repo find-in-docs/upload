@@ -197,13 +197,6 @@ func WordsToInts(stopWords []string, dataFilename string,
 		}
 		line = v.Text
 
-		// Sometimes, we get 0-length line. Not sure why,
-		// but we can get around that issue by ignoring them.
-		// Need to debug this though !!
-		if len(line) == 0 {
-			continue
-		}
-
 		line = proc.Replace(line)
 		line = proc.ToLower(line)
 		words = proc.GetWords(line, words)
