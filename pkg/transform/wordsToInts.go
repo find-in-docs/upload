@@ -15,8 +15,8 @@ type ProcFunc struct {
 	ToLower              func(string) string
 	Replace              func(string) string
 	GetWords             func(string, []string) []string
-	WordsToInts          func([]string, []int) []int
-	WriteWordInts        func(string, int, []int)
+	WordsToInts          func([]string, []data.WordInt) []data.WordInt
+	WriteWordInts        func(string, int, []data.WordInt)
 	WriteWordIntMappings func(string)
 	RemoveStopwords      func([]string) []string
 }
@@ -98,12 +98,12 @@ func removeStopwordsFn(stopwords []string) func([]string) []string {
 	}
 }
 
-func wordToIntsFns() (func([]string, []int) []int, func(string)) {
+func wordToIntsFns() (func([]string, []data.WordInt) []data.WordInt, func(string)) {
 
-	wordToInt := make(map[string]int)
-	intToWord := make(map[int]string)
-	wordNum := 0
-	return func(words []string, wordInts []int) []int {
+	wordToInt := make(map[string]data.WordInt)
+	intToWord := make(map[data.WordInt]string)
+	var wordNum data.WordInt = 0
+	return func(words []string, wordInts []data.WordInt) []data.WordInt {
 
 			wordInts = wordInts[:0]
 			for _, word := range words {
@@ -187,7 +187,7 @@ func WordsToInts(stopWords []string, dataFilename string,
 
 	loadData := data.LoadDocFn(dataFilename)
 	words := make([]string, maxWordsPerDoc)
-	wordInts := make([]int, maxWordsPerDoc)
+	wordInts := make([]data.WordInt, maxWordsPerDoc)
 	var line string
 
 	for {
