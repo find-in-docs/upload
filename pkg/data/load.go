@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-type Doc struct {
-	DocId      string  `json:"review_id"`
+type InputDoc struct {
+	InputDocId string  `json:"review_id"`
 	UserId     string  `json:"user_id"`
 	BusinessId string  `json:"business_id"`
 	Stars      float32 `json:"stars"`
@@ -18,6 +18,22 @@ type Doc struct {
 	Cool       uint16  `json:"cool"`
 	Text       string  `json:"text"`
 	Date       string  `json:"date"`
+}
+
+type WordInt uint32
+
+type Doc struct {
+	DocId      WordInt
+	WordInts   []WordInt
+	InputDocId string
+	UserId     string
+	BusinessId string
+	Stars      float32
+	Useful     uint16
+	Funny      uint16
+	Cool       uint16
+	Text       string
+	Date       string
 }
 
 func splitData(data []byte, atEOF bool) (advance int, token []byte, err error) {
@@ -37,10 +53,24 @@ func splitData(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	return 0, nil, nil
 }
 
-func LoadDocFn(dataFile string) func() (*string, bool) {
+func copyInputDocToDoc(inputDoc *InputDoc, doc *Doc) {
+	doc.InputDocId = inputDoc.InputDocId
+	doc.UserId = inputDoc.UserId
+	doc.BusinessId = inputDoc.BusinessId
+	doc.Stars = inputDoc.Stars
+	doc.Useful = inputDoc.Useful
+	doc.Funny = inputDoc.Funny
+	doc.Cool = inputDoc.Cool
+	doc.Text = inputDoc.Text
+	doc.Date = inputDoc.Date
+}
+
+func LoadDocFn(dataFile string) func() (*Doc, bool) {
 	done := make(chan struct{})
-	in := make(chan string)
-	var doc Doc
+	in := make(chan Doc)
+	var inputDoc InputDoc
+	var doc *Doc = new(Doc)
+	var docId WordInt = 0
 
 	go func() {
 		f, err := os.Open(dataFile)
@@ -57,19 +87,22 @@ func LoadDocFn(dataFile string) func() (*string, bool) {
 
 		for s.Scan() {
 			line := s.Text()
-			if err := json.Unmarshal([]byte(line), &doc); err != nil {
+			if err := json.Unmarshal([]byte(line), &inputDoc); err != nil {
 				log.Fatalf("Error unmarshalling data: %s\n", line)
 				os.Exit(-1)
 			}
 
-			in <- doc.Text
+			copyInputDocToDoc(&inputDoc, doc)
+			doc.DocId = docId
+			docId += 1
+			in <- *doc
 		}
 
 		close(in)
 		close(done)
 	}()
 
-	return func() (*string, bool) {
+	return func() (*Doc, bool) {
 		line, ok := <-in
 		// fmt.Printf("ok: %t, Got line: %d\n", ok, len(line))
 		if !ok {
