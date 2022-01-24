@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// re := `^.*?\"text\"\:\"(.*?)\"`
 type Doc struct {
 	DocId      string  `json:"review_id"`
 	UserId     string  `json:"user_id"`
@@ -25,21 +26,41 @@ func splitData(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		return 0, nil, nil
 	}
 
-	dataString := string(data)
-	if i := strings.Index(dataString, "}"); i >= 0 {
-		return i + 2, data[:i+2], nil
+	if i := strings.Index(string(data), "}\n{"); i >= 0 {
+
+		// Received partial JSON, tell caller to give us more data.
+		firstRightBraceIndex := strings.Index(string(data), "}")
+		if firstRightBraceIndex == -1 {
+			return 0, nil, nil
+		}
+
+		secondLocation :=
+			strings.Index(string(data[firstRightBraceIndex+1:]), "}")
+		secondRightBraceIndex := secondLocation
+		if secondLocation > 0 {
+			secondRightBraceIndex = firstRightBraceIndex + secondLocation
+		}
+
+		if len(string(data)) > firstRightBraceIndex {
+			if secondRightBraceIndex != -1 {
+				return i + 1, data[:i+1], nil
+			} else {
+				return 0, nil, nil
+			}
+		}
+		return i + 1, data[:i+1], nil
 	}
 
 	if atEOF {
 		return len(data), data, nil
 	}
 
-	return 0, nil, nil
+	return
 }
 
-func LoadDocFn(dataFile string) func() (*string, bool) {
+func LoadData(dataFile string) (<-chan string, <-chan struct{}) {
 	done := make(chan struct{})
-	in := make(chan string)
+	in := make(chan string, 100)
 	var doc Doc
 
 	go func() {
@@ -69,12 +90,5 @@ func LoadDocFn(dataFile string) func() (*string, bool) {
 		close(done)
 	}()
 
-	return func() (*string, bool) {
-		line, ok := <-in
-		// fmt.Printf("ok: %t, Got line: %d\n", ok, len(line))
-		if !ok {
-			return nil, ok
-		}
-		return &line, ok
-	}
+	return in, done
 }

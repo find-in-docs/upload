@@ -1,6 +1,7 @@
 package transform
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -183,38 +184,46 @@ func WordsToInts(stopWords []string, dataFilename string,
 
 	proc := GenProcFunc(stopWords)
 
-	out := make(chan []int)
-	data.StoreDataOnDisk(outputDir, wordIntsFn, out)
+	wordIntsFilename := filepath.Join(outputDir, wordIntsFn)
+	f, err := os.OpenFile(wordIntsFilename, os.O_CREATE|os.O_RDWR, 0755)
+	if err != nil {
+		fmt.Printf("Error opening file %s, err: %v\n", wordIntsFilename, err)
+		os.Exit(-1)
+	}
+	defer f.Close()
 
-	load := data.LoadDocFn(dataFilename)
+	bw := bufio.NewWriter(f)
+	if bw == nil {
+		fmt.Printf("Error creating new buffered writer\n")
+		os.Exit(-1)
+	}
+	defer bw.Flush()
+
+	in, done := data.LoadData(dataFilename)
 	words := make([]string, maxWordsPerDoc)
 	wordInts := make([]int, maxWordsPerDoc)
 	var line string
-
+LOOP:
 	for {
-		v, ok := load()
-		if !ok {
-			break
+		select {
+		case line = <-in:
+			if len(line) == 0 {
+				continue
+			}
+
+			line = proc.Replace(line)
+			line = proc.ToLower(line)
+			words = proc.GetWords(line, words)
+			words = proc.RemoveStopwords(words)
+			wordInts = proc.WordsToInts(words, wordInts)
+			fmt.Println(wordInts)
+			bw.WriteString(fmt.Sprintf("%v\n", wordInts))
+		case <-done:
+			if len(in) == 0 {
+				break LOOP
+			}
 		}
-		line = *v
-
-		// Sometimes, we get 0-length line. Not sure why,
-		// but we can get around that issue by ignoring them.
-		// Need to debug this though !!
-		if len(line) == 0 {
-			continue
-		}
-
-		line = proc.Replace(line)
-		line = proc.ToLower(line)
-		words = proc.GetWords(line, words)
-		words = proc.RemoveStopwords(words)
-		wordInts = proc.WordsToInts(words, wordInts)
-
-		out <- wordInts
 	}
-
-	close(out)
 
 	proc.WriteWordIntMappings(outputDir)
 }
