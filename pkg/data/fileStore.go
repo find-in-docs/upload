@@ -7,11 +7,7 @@ import (
 	"path/filepath"
 )
 
-type WordInt uint32
-
-func StoreDataOnDisk(outputDir string, wordIntsFn string) (func([]WordInt), func()) {
-
-	var docId WordInt = 0
+func StoreDataOnDisk(outputDir string, wordIntsFn string) (func(*Doc, []WordInt), func()) {
 
 	wordIntsFilename := filepath.Join(outputDir, wordIntsFn)
 	f, err := os.Create(wordIntsFilename)
@@ -26,12 +22,12 @@ func StoreDataOnDisk(outputDir string, wordIntsFn string) (func([]WordInt), func
 		os.Exit(-1)
 	}
 
-	return func(wordInts []WordInt) {
+	return func(doc *Doc, wordInts []WordInt) {
 			result := make([]WordInt, len(wordInts)+1)
+			doc.WordInts = result
 			copy(result[1:], wordInts)
-			result[0] = docId
+			result[0] = doc.DocId
 			fmt.Fprintf(bw, "%v\n", result)
-			docId += 1
 		}, func() {
 			bw.Flush()
 			f.Close()

@@ -195,7 +195,7 @@ func WordsToInts(stopWords []string, dataFilename string,
 		if !ok {
 			break
 		}
-		line = *v
+		line = v.Text
 
 		// Sometimes, we get 0-length line. Not sure why,
 		// but we can get around that issue by ignoring them.
@@ -210,7 +210,7 @@ func WordsToInts(stopWords []string, dataFilename string,
 		words = proc.RemoveStopwords(words)
 		wordInts = proc.WordsToInts(words, wordInts)
 
-		storeData(wordInts)
+		storeData(v, wordInts)
 	}
 
 	closeData()
