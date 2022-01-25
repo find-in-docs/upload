@@ -6,8 +6,8 @@ import (
 	"os"
 )
 
-func getJson(fn *string, d interface{}) error {
-	stopwordsFile, err := os.Open(*fn)
+func getJson(fn string, d interface{}) error {
+	stopwordsFile, err := os.Open(fn)
 	if err != nil {
 		fmt.Printf("Error opening stopwords file: %v, %s", fn, err)
 		return err
@@ -16,18 +16,18 @@ func getJson(fn *string, d interface{}) error {
 
 	jsonDecoder := json.NewDecoder(stopwordsFile)
 	if err := jsonDecoder.Decode(d); err != nil {
-		fmt.Printf("Error decoding file %s, %s\n", *fn, d)
+		fmt.Printf("Error decoding file %s, %s\n", fn, d)
 		return err
 	}
 
 	return nil
 }
 
-func LoadStopwords(cfg *Config) []string {
+func LoadStopwords(stopwordsFn string) []string {
 
 	var stopwords []string
 
-	if err := getJson(&cfg.EnglishStopwordsFile, &stopwords); err != nil {
+	if err := getJson(stopwordsFn, &stopwords); err != nil {
 		os.Exit(-1)
 	}
 
