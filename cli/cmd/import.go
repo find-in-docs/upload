@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/samirgadkari/search/pkg/config"
+	"github.com/samirgadkari/search/pkg/data"
 	"github.com/samirgadkari/search/pkg/transform"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -30,8 +31,6 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 
 		config.LoadConfig()
 
-		stopWords := config.LoadStopwords(viper.GetString("englishStopwordsFile"))
-
 		if len(args) == 0 {
 			dataFile = viper.GetString("output.location")
 		} else {
@@ -44,8 +43,13 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 			wordIntsFile = filepath.Base(viper.GetString("output.location"))
 			fmt.Printf("outputDir: %s\nwordIntsFile: %s\n", outputDir, wordIntsFile)
 
-			transform.WordsToInts(stopWords, dataFile,
-				outputDir, wordIntsFile)
+			storeData, closeData := data.StoreDataOnDisk(outputDir, wordIntsFile)
+
+			transform.WordsToInts(config.LoadStopwords,
+				data.LoadDocFn(dataFile),
+				storeData,
+				closeData,
+				outputDir)
 		case config.Database.String():
 			fmt.Println("Database support is progress\n")
 		}

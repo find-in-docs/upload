@@ -178,14 +178,14 @@ func GenProcFunc(stopwords []string) *ProcFunc {
 	return &procFunc
 }
 
-func WordsToInts(stopWords []string, dataFilename string,
-	outputDir string, wordIntsFn string) {
+func WordsToInts(loadStopwords func() []string,
+	loadData func() (*data.Doc, bool),
+	storeData func(*data.Doc, []data.WordInt),
+	closeData func(),
+	outputDir string) {
 
-	proc := GenProcFunc(stopWords)
+	proc := GenProcFunc(loadStopwords())
 
-	storeData, closeData := data.StoreDataOnDisk(outputDir, wordIntsFn)
-
-	loadData := data.LoadDocFn(dataFilename)
 	words := make([]string, maxWordsPerDoc)
 	wordInts := make([]data.WordInt, maxWordsPerDoc)
 	var line string

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+
+	"github.com/spf13/viper"
 )
 
 func getJson(fn string, d interface{}) error {
@@ -23,13 +25,19 @@ func getJson(fn string, d interface{}) error {
 	return nil
 }
 
-func LoadStopwords(stopwordsFn string) []string {
+func load(stopwordsFn string) []string {
 
 	var stopwords []string
 
 	if err := getJson(stopwordsFn, &stopwords); err != nil {
+		fmt.Printf("Could not open stopwords file: %s\n", stopwordsFn)
 		os.Exit(-1)
 	}
 
 	return stopwords
+}
+
+func LoadStopwords() []string {
+
+	return load(viper.GetString("englishStopwordsFile"))
 }
