@@ -8,6 +8,3 @@ import (
 
 // Doc is the predicate function for doc builders.
 type Doc func(*sql.Selector)
-
-// User is the predicate function for user builders.
-type User func(*sql.Selector)
