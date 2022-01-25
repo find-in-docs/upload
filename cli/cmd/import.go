@@ -41,15 +41,15 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 		case config.File.String():
 			outputDir = filepath.Dir(viper.GetString("output.location"))
 			wordIntsFile = filepath.Base(viper.GetString("output.location"))
-			fmt.Printf("outputDir: %s\nwordIntsFile: %s\n", outputDir, wordIntsFile)
 
-			storeData, closeData := data.StoreDataOnDisk(outputDir, wordIntsFile)
+			storeData, writeWordIntMappings, closeData :=
+				data.StoreDataOnDisk(outputDir, wordIntsFile)
 
 			transform.WordsToInts(config.LoadStopwords,
 				data.LoadDocFn(dataFile),
+				writeWordIntMappings,
 				storeData,
-				closeData,
-				outputDir)
+				closeData)
 		case config.Database.String():
 			fmt.Println("Database support is progress\n")
 		}

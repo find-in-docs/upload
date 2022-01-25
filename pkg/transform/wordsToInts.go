@@ -1,10 +1,8 @@
 package transform
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -12,13 +10,13 @@ import (
 )
 
 type ProcFunc struct {
-	ToLower              func(string) string
-	Replace              func(string) string
-	GetWords             func(string, []string) []string
-	WordsToInts          func([]string, []data.WordInt) []data.WordInt
-	WriteWordInts        func(string, int, []data.WordInt)
-	WriteWordIntMappings func(string)
-	RemoveStopwords      func([]string) []string
+	ToLower            func(string) string
+	Replace            func(string) string
+	GetWords           func(string, []string) []string
+	WordsToInts        func([]string, []data.WordInt) []data.WordInt
+	WriteWordInts      func(string, int, []data.WordInt)
+	GetWordIntMappings func() (map[string]data.WordInt, map[data.WordInt]string)
+	RemoveStopwords    func([]string) []string
 }
 
 const (
@@ -98,7 +96,8 @@ func removeStopwordsFn(stopwords []string) func([]string) []string {
 	}
 }
 
-func wordToIntsFns() (func([]string, []data.WordInt) []data.WordInt, func(string)) {
+func wordToIntsFns() (func([]string, []data.WordInt) []data.WordInt,
+	func() (map[string]data.WordInt, map[data.WordInt]string)) {
 
 	wordToInt := make(map[string]data.WordInt)
 	intToWord := make(map[data.WordInt]string)
@@ -119,45 +118,8 @@ func wordToIntsFns() (func([]string, []data.WordInt) []data.WordInt, func(string
 			}
 
 			return wordInts
-		}, func(outputDir string) {
-
-			wordToIntFn := filepath.Join(outputDir, wordToIntFilename)
-			wordToIntF, err := os.Create(wordToIntFn)
-			if err != nil {
-				fmt.Printf("Error opening file %s: %v\n", wordToIntFn, err)
-				os.Exit(-1)
-			}
-			defer wordToIntF.Close()
-
-			intToWordFn := filepath.Join(outputDir, intToWordFilename)
-			intToWordF, err := os.Create(intToWordFn)
-			if err != nil {
-				fmt.Printf("Error opening file %s: %v\n", intToWordFn, err)
-				os.Exit(-1)
-			}
-			defer intToWordF.Close()
-
-			wordToIntBytes, err := json.Marshal(wordToInt)
-			if err != nil {
-				fmt.Printf("Error marshalling word to int\n")
-				os.Exit(-1)
-			}
-
-			intToWordBytes, err := json.Marshal(intToWord)
-			if err != nil {
-				fmt.Printf("Error marshalling int to word\n")
-				os.Exit(-1)
-			}
-
-			if _, err := wordToIntF.Write(wordToIntBytes); err != nil {
-				fmt.Printf("Error writing to file %s: %v\n", wordToIntFn, err)
-				os.Exit(-1)
-			}
-
-			if _, err := intToWordF.Write(intToWordBytes); err != nil {
-				fmt.Printf("Error writing to file %s: %v\n", intToWordFn, err)
-				os.Exit(-1)
-			}
+		}, func() (map[string]data.WordInt, map[data.WordInt]string) {
+			return wordToInt, intToWord
 		}
 }
 
@@ -173,16 +135,16 @@ func GenProcFunc(stopwords []string) *ProcFunc {
 
 	procFunc.GetWords = getWordsFn()
 	procFunc.RemoveStopwords = removeStopwordsFn(stopwords)
-	procFunc.WordsToInts, procFunc.WriteWordIntMappings = wordToIntsFns()
+	procFunc.WordsToInts, procFunc.GetWordIntMappings = wordToIntsFns()
 
 	return &procFunc
 }
 
 func WordsToInts(loadStopwords func() []string,
 	loadData func() (*data.Doc, bool),
+	writeWordIntMappings func(map[string]data.WordInt, map[data.WordInt]string),
 	storeData func(*data.Doc, []data.WordInt),
-	closeData func(),
-	outputDir string) {
+	closeData func()) {
 
 	proc := GenProcFunc(loadStopwords())
 
@@ -207,5 +169,6 @@ func WordsToInts(loadStopwords func() []string,
 	}
 
 	closeData()
-	proc.WriteWordIntMappings(outputDir)
+	wordToInt, intToWord := proc.GetWordIntMappings()
+	writeWordIntMappings(wordToInt, intToWord)
 }
