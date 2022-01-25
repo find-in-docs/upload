@@ -6,12 +6,27 @@ import (
 	"github.com/spf13/viper"
 )
 
+type OutputLocationType int
+
+const (
+	File OutputLocationType = iota
+	Database
+)
+
+func (o OutputLocationType) String() string {
+	return [...]string{"file", "database"}[o]
+}
+
+type OutputConfig struct {
+	Type     string
+	Location string
+}
+
 type Config struct {
 	OriginalFile         string
 	DataFile             string
 	EnglishStopwordsFile string
-	OutputDir            string
-	WordIntsFile         string
+	Output               OutputConfig
 }
 
 func LoadConfig() *Config {

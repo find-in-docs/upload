@@ -5,6 +5,9 @@ Copyright © 2022 Samir Gadkari
 package cmd
 
 import (
+	"fmt"
+	"path/filepath"
+
 	"github.com/samirgadkari/search/pkg/config"
 	"github.com/samirgadkari/search/pkg/transform"
 	"github.com/spf13/cobra"
@@ -20,6 +23,15 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 {"review_id": 2, "text": "User review for ID 2"}`,
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg := config.LoadConfig()
+		fmt.Printf("%#v\n", cfg)
+		var outputDir = ""
+		var wordIntsFile = ""
+		if cfg.Output.Type == config.File.String() {
+			outputDir = filepath.Dir(cfg.Output.Location)
+			wordIntsFile = filepath.Base(cfg.Output.Location)
+		}
+
+		fmt.Printf("outputDir: %s\nwordIntsFile: %s\n", outputDir, wordIntsFile)
 
 		stopWords := config.LoadStopwords(cfg)
 
@@ -31,7 +43,7 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 		}
 
 		transform.WordsToInts(stopWords, dataFile,
-			cfg.OutputDir, cfg.WordIntsFile)
+			outputDir, wordIntsFile)
 	},
 }
 
