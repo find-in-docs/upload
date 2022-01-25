@@ -5,8 +5,6 @@ import (
 	"entgo.io/ent/schema/field"
 )
 
-//go:generate go run -mod=mod entgo.io/ent/cmd/ent generate
-
 // Doc schema
 type Doc struct {
 	ent.Schema
