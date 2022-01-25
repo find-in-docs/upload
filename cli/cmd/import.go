@@ -11,6 +11,7 @@ import (
 	"github.com/samirgadkari/search/pkg/config"
 	"github.com/samirgadkari/search/pkg/transform"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // importCmd represents the import command
@@ -22,28 +23,32 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 {"review_id": 1, "text": "User review for ID 1"}
 {"review_id": 2, "text": "User review for ID 2"}`,
 	Run: func(cmd *cobra.Command, args []string) {
-		cfg := config.LoadConfig()
-		fmt.Printf("%#v\n", cfg)
+
 		var outputDir = ""
 		var wordIntsFile = ""
-		if cfg.Output.Type == config.File.String() {
-			outputDir = filepath.Dir(cfg.Output.Location)
-			wordIntsFile = filepath.Base(cfg.Output.Location)
-		}
+		var dataFile = ""
 
-		fmt.Printf("outputDir: %s\nwordIntsFile: %s\n", outputDir, wordIntsFile)
+		config.LoadConfig()
 
-		stopWords := config.LoadStopwords(cfg)
+		stopWords := config.LoadStopwords(viper.GetString("englishStopwordsFile"))
 
-		var dataFile string
 		if len(args) == 0 {
-			dataFile = cfg.DataFile
+			dataFile = viper.GetString("output.location")
 		} else {
 			dataFile = args[0]
 		}
 
-		transform.WordsToInts(stopWords, dataFile,
-			outputDir, wordIntsFile)
+		switch viper.GetString("output.type") {
+		case config.File.String():
+			outputDir = filepath.Dir(viper.GetString("output.location"))
+			wordIntsFile = filepath.Base(viper.GetString("output.location"))
+			fmt.Printf("outputDir: %s\nwordIntsFile: %s\n", outputDir, wordIntsFile)
+
+			transform.WordsToInts(stopWords, dataFile,
+				outputDir, wordIntsFile)
+		case config.Database.String():
+			fmt.Println("Database support is progress\n")
+		}
 	},
 }
 

@@ -17,6 +17,7 @@ func (o OutputLocationType) String() string {
 	return [...]string{"file", "database"}[o]
 }
 
+/*
 type OutputConfig struct {
 	Type     string
 	Location string
@@ -28,8 +29,9 @@ type Config struct {
 	EnglishStopwordsFile string
 	Output               OutputConfig
 }
+*/
 
-func LoadConfig() *Config {
+func LoadConfig() {
 	configFilename := "config.yaml"
 
 	viper.SetConfigName("config")
@@ -46,10 +48,12 @@ func LoadConfig() *Config {
 		}
 	}
 
-	var C Config
-	if err := viper.Unmarshal(&C); err != nil {
-		panic(fmt.Errorf("Fatal error unmarshaling config file %s.\n", configFilename))
-	}
+	/*
+		var C Config
+		if err := viper.Unmarshal(&C); err != nil {
+			panic(fmt.Errorf("Fatal error unmarshaling config file %s.\n", configFilename))
+		}
 
-	return &C
+		return &C
+	*/
 }
