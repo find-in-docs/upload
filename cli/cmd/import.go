@@ -30,6 +30,8 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 
 		config.LoadConfig()
 
+		stopwords := data.LoadStopwords(viper.GetString("englishStopwordsFile"))
+
 		switch viper.GetString("output.type") {
 		case config.File.String():
 			outputDir = filepath.Dir(viper.GetString("output.location"))
@@ -41,7 +43,6 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 			var wordToInt map[string]data.WordInt
 			var intToWord map[data.WordInt]string
 
-			stopwords := disk.LoadStopwords()
 			wordsToInts := transform.WordsToInts(stopwords)
 			for {
 				v, ok := disk.LoadDoc()

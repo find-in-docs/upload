@@ -11,7 +11,6 @@ import (
 )
 
 type DiskFunc struct {
-	LoadStopwords        func() []string
 	LoadDoc              func() (*Doc, bool)
 	StoreData            func(*Doc, []WordInt)
 	WriteWordIntMappings func(map[string]WordInt, map[WordInt]string)
@@ -38,10 +37,6 @@ func DiskSetup(outputDir string, wordIntsFn string) *DiskFunc {
 	}
 
 	var diskFunc DiskFunc
-	diskFunc.LoadStopwords = func() []string {
-
-		return Load(viper.GetString("englishStopwordsFile"))
-	}
 
 	diskFunc.LoadDoc = LoadDocFn(dataFilename)
 

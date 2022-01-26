@@ -23,7 +23,7 @@ func getJson(fn string, d interface{}) error {
 	return nil
 }
 
-func Load(stopwordsFn string) []string {
+func LoadStopwords(stopwordsFn string) []string {
 
 	var stopwords []string
 
