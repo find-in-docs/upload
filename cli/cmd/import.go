@@ -74,7 +74,7 @@ func init() {
 func DBBackend() {
 
 	db := data.DBSetup()
-	client := db.OpenConnection()
-	db.CreateSchema(client)
-	db.CloseConnection(client)
+	db.OpenConnection()
+	db.CreateSchema()
+	db.CloseConnection()
 }

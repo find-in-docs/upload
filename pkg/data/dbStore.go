@@ -11,30 +11,30 @@ import (
 )
 
 type DBFunc struct {
-	OpenConnection  func() *ent.Client
-	CreateSchema    func(*ent.Client)
-	StoreData       func(*ent.Client, *Doc)
-	ReadData        func(*ent.Client) *Doc
-	CloseConnection func(*ent.Client)
+	OpenConnection  func()
+	CreateSchema    func()
+	StoreData       func(*Doc)
+	ReadData        func() *Doc
+	CloseConnection func()
 }
 
 func DBSetup() *DBFunc {
 
+	var client *ent.Client
+	var err error
 	var dbFunc DBFunc
 
-	dbFunc.OpenConnection = func() *ent.Client {
+	dbFunc.OpenConnection = func() {
 
-		client, err := ent.Open("postgres", viper.GetString("output.location"))
+		client, err = ent.Open("postgres", viper.GetString("output.location"))
 		if err != nil {
 			fmt.Printf("Error connecting to postgres database using: %s\n",
 				viper.GetString("output.location"))
 			fmt.Printf("err: %v\n", err)
 			os.Exit(-1)
 		}
-
-		return client
 	}
-	dbFunc.CreateSchema = func(client *ent.Client) {
+	dbFunc.CreateSchema = func() {
 
 		if client == nil {
 			fmt.Printf("Create client connection before creating schema")
@@ -46,9 +46,9 @@ func DBSetup() *DBFunc {
 			os.Exit(-1)
 		}
 	}
-	dbFunc.StoreData = func(client *ent.Client, doc *Doc) {}
-	dbFunc.ReadData = func(client *ent.Client) *Doc { return nil }
-	dbFunc.CloseConnection = func(client *ent.Client) {
+	dbFunc.StoreData = func(doc *Doc) {}
+	dbFunc.ReadData = func() *Doc { return nil }
+	dbFunc.CloseConnection = func() {
 
 		if client == nil {
 			fmt.Printf("client is nil\n")
