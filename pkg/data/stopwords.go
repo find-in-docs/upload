@@ -1,11 +1,9 @@
-package config
+package data
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
-
-	"github.com/spf13/viper"
 )
 
 func getJson(fn string, d interface{}) error {
@@ -25,7 +23,7 @@ func getJson(fn string, d interface{}) error {
 	return nil
 }
 
-func load(stopwordsFn string) []string {
+func Load(stopwordsFn string) []string {
 
 	var stopwords []string
 
@@ -35,9 +33,4 @@ func load(stopwordsFn string) []string {
 	}
 
 	return stopwords
-}
-
-func LoadStopwords() []string {
-
-	return load(viper.GetString("englishStopwordsFile"))
 }

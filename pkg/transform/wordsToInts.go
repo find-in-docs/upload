@@ -140,35 +140,22 @@ func GenProcFunc(stopwords []string) *ProcFunc {
 	return &procFunc
 }
 
-func WordsToInts(loadStopwords func() []string,
-	loadData func() (*data.Doc, bool),
-	writeWordIntMappings func(map[string]data.WordInt, map[data.WordInt]string),
-	storeData func(*data.Doc, []data.WordInt),
-	closeData func()) {
+func WordsToInts(stopwords []string) func(string) ([]data.WordInt, map[string]data.WordInt, map[data.WordInt]string) {
 
-	proc := GenProcFunc(loadStopwords())
+	proc := GenProcFunc(stopwords)
 
 	words := make([]string, maxWordsPerDoc)
 	wordInts := make([]data.WordInt, maxWordsPerDoc)
-	var line string
 
-	for {
-		v, ok := loadData()
-		if !ok {
-			break
-		}
-		line = v.Text
+	return func(line string) ([]data.WordInt, map[string]data.WordInt, map[data.WordInt]string) {
 
 		line = proc.Replace(line)
 		line = proc.ToLower(line)
 		words = proc.GetWords(line, words)
 		words = proc.RemoveStopwords(words)
 		wordInts = proc.WordsToInts(words, wordInts)
+		wordToInt, intToWord := proc.GetWordIntMappings()
 
-		storeData(v, wordInts)
+		return wordInts, wordToInt, intToWord
 	}
-
-	closeData()
-	wordToInt, intToWord := proc.GetWordIntMappings()
-	writeWordIntMappings(wordToInt, intToWord)
 }

@@ -27,29 +27,34 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 
 		var outputDir = ""
 		var wordIntsFile = ""
-		var dataFile = ""
 
 		config.LoadConfig()
-
-		if len(args) == 0 {
-			dataFile = viper.GetString("output.location")
-		} else {
-			dataFile = args[0]
-		}
 
 		switch viper.GetString("output.type") {
 		case config.File.String():
 			outputDir = filepath.Dir(viper.GetString("output.location"))
 			wordIntsFile = filepath.Base(viper.GetString("output.location"))
 
-			storeData, writeWordIntMappings, closeData :=
-				data.StoreDataOnDisk(outputDir, wordIntsFile)
+			disk := data.DiskSetup(outputDir, wordIntsFile)
 
-			transform.WordsToInts(config.LoadStopwords,
-				data.LoadDocFn(dataFile),
-				writeWordIntMappings,
-				storeData,
-				closeData)
+			var wordInts []data.WordInt
+			var wordToInt map[string]data.WordInt
+			var intToWord map[data.WordInt]string
+
+			stopwords := disk.LoadStopwords()
+			wordsToInts := transform.WordsToInts(stopwords)
+			for {
+				v, ok := disk.LoadDoc()
+				if !ok {
+					break
+				}
+				wordInts, wordToInt, intToWord = wordsToInts(v.Text)
+				disk.StoreData(v, wordInts)
+			}
+
+			disk.WriteWordIntMappings(wordToInt, intToWord)
+			disk.Close()
+
 		case config.Database.String():
 			fmt.Println("Database support in progress")
 			DBBackend()
