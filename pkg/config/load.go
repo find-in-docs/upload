@@ -17,20 +17,6 @@ func (o OutputLocationType) String() string {
 	return [...]string{"file", "database"}[o]
 }
 
-/*
-type OutputConfig struct {
-	Type     string
-	Location string
-}
-
-type Config struct {
-	OriginalFile         string
-	DataFile             string
-	EnglishStopwordsFile string
-	Output               OutputConfig
-}
-*/
-
 func LoadConfig() {
 	configFilename := "config.yaml"
 
@@ -47,13 +33,4 @@ func LoadConfig() {
 				configFilename, err))
 		}
 	}
-
-	/*
-		var C Config
-		if err := viper.Unmarshal(&C); err != nil {
-			panic(fmt.Errorf("Fatal error unmarshaling config file %s.\n", configFilename))
-		}
-
-		return &C
-	*/
 }
