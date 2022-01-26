@@ -51,7 +51,8 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 				storeData,
 				closeData)
 		case config.Database.String():
-			fmt.Println("Database support is progress\n")
+			fmt.Println("Database support in progress")
+			DBBackend()
 		}
 	},
 }
@@ -68,4 +69,12 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// importCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+
+func DBBackend() {
+
+	db := data.DBSetup()
+	client := db.OpenConnection()
+	db.CreateSchema(client)
+	db.CloseConnection(client)
 }
