@@ -79,7 +79,6 @@ func DBSetup() *DBFunc {
 			` values ($1, $2, $3, $4, $5, 
 			 $6, $7, $8, $9, $10, $11);`
 
-		fmt.Printf("insertStatement: %s\n", insertStatement)
 		if _, err := conn.Exec(context.Background(), insertStatement,
 			doc.DocId, doc.WordInts, doc.InputDocId,
 			doc.UserId, doc.BusinessId, doc.Stars, doc.Useful,
@@ -87,7 +86,6 @@ func DBSetup() *DBFunc {
 			fmt.Printf("Store data failed. err: %v\n", err)
 			os.Exit(-1)
 		}
-		fmt.Printf("Doc: %v\n", doc)
 	}
 	dbFunc.ReadData = func() *Doc { return nil }
 	dbFunc.CloseConnection = func() {
