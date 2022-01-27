@@ -26,7 +26,7 @@ func DiskSetup(outputDir string, wordIntsFn string) *DiskFunc {
 	wordIntsFilename := filepath.Join(outputDir, wordIntsFn)
 	f, err := os.Create(wordIntsFilename)
 	if err != nil {
-		fmt.Printf("Error opening file %s, err: %v\n", wordIntsFilename, err)
+		fmt.Printf("Error creating file %s, err: %v\n", wordIntsFilename, err)
 		os.Exit(-1)
 	}
 
@@ -53,7 +53,7 @@ func DiskSetup(outputDir string, wordIntsFn string) *DiskFunc {
 		wordToIntFn := filepath.Join(outputDir, wordToIntFilename)
 		wordToIntF, err := os.Create(wordToIntFn)
 		if err != nil {
-			fmt.Printf("Error opening file %s: %v\n", wordToIntFn, err)
+			fmt.Printf("Error creating file %s: %v\n", wordToIntFn, err)
 			os.Exit(-1)
 		}
 		defer wordToIntF.Close()
@@ -61,7 +61,7 @@ func DiskSetup(outputDir string, wordIntsFn string) *DiskFunc {
 		intToWordFn := filepath.Join(outputDir, intToWordFilename)
 		intToWordF, err := os.Create(intToWordFn)
 		if err != nil {
-			fmt.Printf("Error opening file %s: %v\n", intToWordFn, err)
+			fmt.Printf("Error creating file %s: %v\n", intToWordFn, err)
 			os.Exit(-1)
 		}
 		defer intToWordF.Close()
