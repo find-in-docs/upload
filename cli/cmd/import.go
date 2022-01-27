@@ -58,7 +58,37 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 
 		case config.Database.String():
 			fmt.Println("Database support in progress")
-			DBBackend()
+
+			outputDir = filepath.Dir(viper.GetString("output.location"))
+			wordIntsFile = filepath.Base(viper.GetString("output.location"))
+
+			disk := data.DiskSetup(outputDir, wordIntsFile)
+
+			db := data.DBSetup()
+
+			var wordInts []data.WordInt
+			var wordToInt map[string]data.WordInt
+			var intToWord map[data.WordInt]string
+			tableName := "doc"
+
+			db.OpenConnection()
+			db.CreateTable(tableName)
+
+			wordsToInts := transform.WordsToInts(stopwords)
+			for {
+				v, ok := disk.LoadDoc()
+				if !ok {
+					break
+				}
+				wordInts, wordToInt, intToWord = wordsToInts(v.Text)
+				v.WordInts = wordInts
+				db.StoreData(v, tableName, wordInts)
+			}
+
+			db.CloseConnection()
+
+			disk.WriteWordIntMappings(wordToInt, intToWord)
+			disk.Close()
 		}
 	},
 }
@@ -75,12 +105,4 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// importCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-}
-
-func DBBackend() {
-
-	db := data.DBSetup()
-	db.OpenConnection()
-	db.CreateSchema()
-	db.CloseConnection()
 }
