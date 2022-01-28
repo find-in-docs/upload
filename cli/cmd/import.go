@@ -5,9 +5,6 @@ Copyright © 2022 Samir Gadkari
 package cmd
 
 import (
-	"fmt"
-	"path/filepath"
-
 	"github.com/samirgadkari/search/pkg/config"
 	"github.com/samirgadkari/search/pkg/data"
 	"github.com/samirgadkari/search/pkg/transform"
@@ -25,19 +22,14 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 {"review_id": 2, "text": "User review for ID 2"}`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		var outputDir = ""
-		var wordIntsFile = ""
-
 		config.LoadConfig()
 
 		stopwords := data.LoadStopwords(viper.GetString("englishStopwordsFile"))
 
+		disk := data.DiskSetup()
+
 		switch viper.GetString("output.type") {
 		case config.File.String():
-			outputDir = filepath.Dir(viper.GetString("output.location"))
-			wordIntsFile = filepath.Base(viper.GetString("output.location"))
-
-			disk := data.DiskSetup(outputDir, wordIntsFile)
 
 			var wordInts []data.WordInt
 			var wordToInt map[string]data.WordInt
@@ -57,12 +49,6 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 			disk.Close()
 
 		case config.Database.String():
-			fmt.Println("Database support in progress")
-
-			outputDir = filepath.Dir(viper.GetString("output.location"))
-			wordIntsFile = filepath.Base(viper.GetString("output.location"))
-
-			disk := data.DiskSetup(outputDir, wordIntsFile)
 
 			db := data.DBSetup()
 
@@ -85,10 +71,8 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 				db.StoreData(v, tableName, wordInts)
 			}
 
+			db.StoreWordIntMappings("wordtoint", wordToInt, "inttoword", intToWord)
 			db.CloseConnection()
-
-			disk.WriteWordIntMappings(wordToInt, intToWord)
-			disk.Close()
 		}
 	},
 }

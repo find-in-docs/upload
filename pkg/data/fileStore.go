@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/samirgadkari/search/pkg/config"
 	"github.com/spf13/viper"
 )
 
@@ -17,11 +18,21 @@ type DiskFunc struct {
 	Close                func()
 }
 
-func DiskSetup(outputDir string, wordIntsFn string) *DiskFunc {
+func DiskSetup() *DiskFunc {
+
+	var diskFunc DiskFunc
+
+	dataFilename := viper.GetString("dataFile")
+	diskFunc.LoadDoc = LoadDocFn(dataFilename)
+	if viper.GetString("output.type") == config.Database.String() {
+		return &diskFunc
+	}
+
+	outputDir := filepath.Dir(viper.GetString("output.location"))
+	wordIntsFn := filepath.Base(viper.GetString("output.location"))
 
 	wordToIntFilename := viper.GetString("output.wordToIntFn")
 	intToWordFilename := viper.GetString("output.intToWordFn")
-	dataFilename := viper.GetString("dataFile")
 
 	wordIntsFilename := filepath.Join(outputDir, wordIntsFn)
 	f, err := os.Create(wordIntsFilename)
@@ -35,10 +46,6 @@ func DiskSetup(outputDir string, wordIntsFn string) *DiskFunc {
 		fmt.Printf("Error creating new buffered writer\n")
 		os.Exit(-1)
 	}
-
-	var diskFunc DiskFunc
-
-	diskFunc.LoadDoc = LoadDocFn(dataFilename)
 
 	diskFunc.StoreData = func(doc *Doc, wordInts []WordInt) {
 		result := make([]WordInt, len(wordInts)+1)
