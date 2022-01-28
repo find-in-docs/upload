@@ -12,7 +12,7 @@ type DBFunc struct {
 	OpenConnection       func() error
 	CreateTable          func(string) error
 	StoreData            func(*Doc, string, []WordInt) error
-	StoreWordIntMappings func(string, map[string]WordInt, string, map[WordInt]string) error
+	StoreWordIntMappings func(string, map[string]WordInt) error
 	ReadData             func() *Doc
 	CloseConnection      func() error
 }
@@ -62,10 +62,6 @@ func DBSetup() *DBFunc {
 				int integer)`
 	createWordToIntString := `(word,
 					int)`
-	intToWordSchema := `(int integer, 
-				word text)`
-	createIntToWordString := `(int,
-					word)`
 
 	dbFunc.OpenConnection = func() error {
 
@@ -80,25 +76,16 @@ func DBSetup() *DBFunc {
 
 		return db.CreateTable(tableName, docSchema)
 	}
-	dbFunc.StoreWordIntMappings = func(wordToIntTable string, wordToInt map[string]WordInt,
-		intToWordTable string, intToWord map[WordInt]string) error {
+	dbFunc.StoreWordIntMappings = func(wordToIntTable string, wordToInt map[string]WordInt) error {
 
 		db.CreateTable(wordToIntTable, wordToIntSchema)
-		db.CreateTable(intToWordTable, intToWordSchema)
 
 		wordToIntInsertStatement := `insert into ` + wordToIntTable + ` ` + createWordToIntString +
-			`values ($1, $2);`
-		intToWordInsertStatement := `insert into ` + intToWordTable + ` ` + createIntToWordString +
 			`values ($1, $2);`
 		for word, i := range wordToInt {
 			if _, err := db.conn.Exec(context.Background(), wordToIntInsertStatement,
 				word, i); err != nil {
 				fmt.Printf("Store Int to Word mapping failed. err: %v\n", err)
-				return err
-			}
-			if _, err := db.conn.Exec(context.Background(), intToWordInsertStatement,
-				i, word); err != nil {
-				fmt.Printf("Store Word to Int mapping failed. err: %v\n", err)
 				return err
 			}
 		}

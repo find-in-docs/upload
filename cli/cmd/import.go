@@ -33,7 +33,6 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 
 			var wordInts []data.WordInt
 			var wordToInt map[string]data.WordInt
-			var intToWord map[data.WordInt]string
 
 			wordsToInts := transform.WordsToInts(stopwords)
 			for {
@@ -41,11 +40,11 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 				if !ok {
 					break
 				}
-				wordInts, wordToInt, intToWord = wordsToInts(v.Text)
+				wordInts, wordToInt = wordsToInts(v.Text)
 				disk.StoreData(v, wordInts)
 			}
 
-			disk.WriteWordIntMappings(wordToInt, intToWord)
+			disk.WriteWordIntMappings(wordToInt)
 			disk.Close()
 
 		case config.Database.String():
@@ -54,7 +53,6 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 
 			var wordInts []data.WordInt
 			var wordToInt map[string]data.WordInt
-			var intToWord map[data.WordInt]string
 			tableName := "doc"
 
 			if err := dbFunc.OpenConnection(); err != nil {
@@ -70,15 +68,14 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 				if !ok {
 					break
 				}
-				wordInts, wordToInt, intToWord = wordsToInts(v.Text)
+				wordInts, wordToInt = wordsToInts(v.Text)
 				v.WordInts = wordInts
 				if err := dbFunc.StoreData(v, tableName, wordInts); err != nil {
 					break
 				}
 			}
 
-			if err := dbFunc.StoreWordIntMappings("wordtoint", wordToInt, "inttoword",
-				intToWord); err != nil {
+			if err := dbFunc.StoreWordIntMappings("wordtoint", wordToInt); err != nil {
 				break
 			}
 			if err := dbFunc.CloseConnection(); err != nil {

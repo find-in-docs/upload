@@ -15,7 +15,7 @@ type ProcFunc struct {
 	GetWords           func(string, []string) []string
 	WordsToInts        func([]string, []data.WordInt) []data.WordInt
 	WriteWordInts      func(string, int, []data.WordInt)
-	GetWordIntMappings func() (map[string]data.WordInt, map[data.WordInt]string)
+	GetWordIntMappings func() map[string]data.WordInt
 	RemoveStopwords    func([]string) []string
 }
 
@@ -97,10 +97,9 @@ func removeStopwordsFn(stopwords []string) func([]string) []string {
 }
 
 func wordToIntsFns() (func([]string, []data.WordInt) []data.WordInt,
-	func() (map[string]data.WordInt, map[data.WordInt]string)) {
+	func() map[string]data.WordInt) {
 
 	wordToInt := make(map[string]data.WordInt)
-	intToWord := make(map[data.WordInt]string)
 	var wordNum data.WordInt = 0
 	return func(words []string, wordInts []data.WordInt) []data.WordInt {
 
@@ -108,7 +107,6 @@ func wordToIntsFns() (func([]string, []data.WordInt) []data.WordInt,
 			for _, word := range words {
 				if _, ok := wordToInt[word]; ok == false {
 					wordToInt[word] = wordNum
-					intToWord[wordNum] = word
 					wordInts = append(wordInts, wordNum)
 					wordNum += 1
 				} else {
@@ -118,8 +116,8 @@ func wordToIntsFns() (func([]string, []data.WordInt) []data.WordInt,
 			}
 
 			return wordInts
-		}, func() (map[string]data.WordInt, map[data.WordInt]string) {
-			return wordToInt, intToWord
+		}, func() map[string]data.WordInt {
+			return wordToInt
 		}
 }
 
@@ -140,22 +138,22 @@ func GenProcFunc(stopwords []string) *ProcFunc {
 	return &procFunc
 }
 
-func WordsToInts(stopwords []string) func(string) ([]data.WordInt, map[string]data.WordInt, map[data.WordInt]string) {
+func WordsToInts(stopwords []string) func(string) ([]data.WordInt, map[string]data.WordInt) {
 
 	proc := GenProcFunc(stopwords)
 
 	words := make([]string, maxWordsPerDoc)
 	wordInts := make([]data.WordInt, maxWordsPerDoc)
 
-	return func(line string) ([]data.WordInt, map[string]data.WordInt, map[data.WordInt]string) {
+	return func(line string) ([]data.WordInt, map[string]data.WordInt) {
 
 		line = proc.Replace(line)
 		line = proc.ToLower(line)
 		words = proc.GetWords(line, words)
 		words = proc.RemoveStopwords(words)
 		wordInts = proc.WordsToInts(words, wordInts)
-		wordToInt, intToWord := proc.GetWordIntMappings()
+		wordToInt := proc.GetWordIntMappings()
 
-		return wordInts, wordToInt, intToWord
+		return wordInts, wordToInt
 	}
 }
