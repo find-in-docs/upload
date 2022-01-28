@@ -22,7 +22,7 @@ func createTable(conn *pgx.Conn, tableName string, schema string) {
 
 	checkIfExists := `select 'public.` + tableName + `'::regclass;`
 	if _, err := conn.Exec(context.Background(), checkIfExists); err != nil {
-		fmt.Printf("Table does not exist, so create it.\n")
+		fmt.Printf("Table %s does not exist, so create it.\n", tableName)
 
 		createString := `create table ` + tableName + ` ` + schema + `;`
 		if _, err := conn.Exec(context.Background(), createString); err != nil {
@@ -70,7 +70,7 @@ func DBSetup() *DBFunc {
 
 	dbFunc.OpenConnection = func() {
 
-		conn, err = pgx.Connect(context.Background(), viper.GetString("output.location"))
+		conn, err = pgx.Connect(context.Background(), viper.GetString("output.connection"))
 		if err != nil {
 			fmt.Printf("Error connecting to postgres database using: %s\n",
 				viper.GetString("output.location"))
