@@ -157,3 +157,13 @@ func WordsToInts(stopwords []string) func(string) ([]data.WordInt, map[string]da
 		return wordInts, wordToInt
 	}
 }
+
+func WordToIntSwitchKV(wordToInt map[string]data.WordInt) *map[data.WordInt]string {
+
+	intToWord := make(map[data.WordInt]string)
+	for k, v := range wordToInt {
+		intToWord[v] = k
+	}
+
+	return &intToWord
+}
