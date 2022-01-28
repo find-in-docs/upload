@@ -50,15 +50,19 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 
 		case config.Database.String():
 
-			db := data.DBSetup()
+			dbFunc := data.DBSetup()
 
 			var wordInts []data.WordInt
 			var wordToInt map[string]data.WordInt
 			var intToWord map[data.WordInt]string
 			tableName := "doc"
 
-			db.OpenConnection()
-			db.CreateTable(tableName)
+			if err := dbFunc.OpenConnection(); err != nil {
+				break
+			}
+			if err := dbFunc.CreateTable(tableName); err != nil {
+				break
+			}
 
 			wordsToInts := transform.WordsToInts(stopwords)
 			for {
@@ -68,11 +72,18 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 				}
 				wordInts, wordToInt, intToWord = wordsToInts(v.Text)
 				v.WordInts = wordInts
-				db.StoreData(v, tableName, wordInts)
+				if err := dbFunc.StoreData(v, tableName, wordInts); err != nil {
+					break
+				}
 			}
 
-			db.StoreWordIntMappings("wordtoint", wordToInt, "inttoword", intToWord)
-			db.CloseConnection()
+			if err := dbFunc.StoreWordIntMappings("wordtoint", wordToInt, "inttoword",
+				intToWord); err != nil {
+				break
+			}
+			if err := dbFunc.CloseConnection(); err != nil {
+				break
+			}
 		}
 	},
 }

@@ -6,16 +6,15 @@ import (
 	"os"
 
 	"github.com/jackc/pgx/v4"
-	"github.com/spf13/viper"
 )
 
 type DBFunc struct {
-	OpenConnection       func()
-	CreateTable          func(string)
-	StoreData            func(*Doc, string, []WordInt)
-	StoreWordIntMappings func(string, map[string]WordInt, string, map[WordInt]string)
+	OpenConnection       func() error
+	CreateTable          func(string) error
+	StoreData            func(*Doc, string, []WordInt) error
+	StoreWordIntMappings func(string, map[string]WordInt, string, map[WordInt]string) error
 	ReadData             func() *Doc
-	CloseConnection      func()
+	CloseConnection      func() error
 }
 
 func createTable(conn *pgx.Conn, tableName string, schema string) {
@@ -34,7 +33,7 @@ func createTable(conn *pgx.Conn, tableName string, schema string) {
 
 func DBSetup() *DBFunc {
 
-	var conn *pgx.Conn
+	var db *DB
 	var err error
 	var dbFunc DBFunc
 	docSchema := `(docid integer,
@@ -68,76 +67,64 @@ func DBSetup() *DBFunc {
 	createIntToWordString := `(int,
 					word)`
 
-	dbFunc.OpenConnection = func() {
+	dbFunc.OpenConnection = func() error {
 
-		conn, err = pgx.Connect(context.Background(), viper.GetString("output.connection"))
+		db, err = DBConnect()
 		if err != nil {
-			fmt.Printf("Error connecting to postgres database using: %s\n",
-				viper.GetString("output.location"))
-			fmt.Printf("err: %v\n", err)
-			os.Exit(-1)
+			return err
 		}
+
+		return nil
 	}
-	dbFunc.CreateTable = func(tableName string) {
+	dbFunc.CreateTable = func(tableName string) error {
 
-		if conn == nil {
-			fmt.Printf("Create db connection before creating schema")
-			os.Exit(-1)
-		}
-
-		createTable(conn, tableName, docSchema)
+		return db.CreateTable(tableName, docSchema)
 	}
 	dbFunc.StoreWordIntMappings = func(wordToIntTable string, wordToInt map[string]WordInt,
-		intToWordTable string, intToWord map[WordInt]string) {
+		intToWordTable string, intToWord map[WordInt]string) error {
 
-		createTable(conn, wordToIntTable, wordToIntSchema)
-		createTable(conn, intToWordTable, intToWordSchema)
+		db.CreateTable(wordToIntTable, wordToIntSchema)
+		db.CreateTable(intToWordTable, intToWordSchema)
 
 		wordToIntInsertStatement := `insert into ` + wordToIntTable + ` ` + createWordToIntString +
 			`values ($1, $2);`
 		intToWordInsertStatement := `insert into ` + intToWordTable + ` ` + createIntToWordString +
 			`values ($1, $2);`
 		for word, i := range wordToInt {
-			if _, err := conn.Exec(context.Background(), wordToIntInsertStatement,
+			if _, err := db.conn.Exec(context.Background(), wordToIntInsertStatement,
 				word, i); err != nil {
 				fmt.Printf("Store Int to Word mapping failed. err: %v\n", err)
-				os.Exit(-1)
+				return err
 			}
-			if _, err := conn.Exec(context.Background(), intToWordInsertStatement,
+			if _, err := db.conn.Exec(context.Background(), intToWordInsertStatement,
 				i, word); err != nil {
 				fmt.Printf("Store Word to Int mapping failed. err: %v\n", err)
-				os.Exit(-1)
+				return err
 			}
 		}
 
+		return nil
 	}
-	dbFunc.StoreData = func(doc *Doc, tableName string, wordInts []WordInt) {
+	dbFunc.StoreData = func(doc *Doc, tableName string, wordInts []WordInt) error {
 
 		insertStatement := `insert into ` + tableName + ` ` + createDocString +
 			` values ($1, $2, $3, $4, $5, 
 			 $6, $7, $8, $9, $10, $11);`
 
-		if _, err := conn.Exec(context.Background(), insertStatement,
+		if _, err := db.conn.Exec(context.Background(), insertStatement,
 			doc.DocId, doc.WordInts, doc.InputDocId,
 			doc.UserId, doc.BusinessId, doc.Stars, doc.Useful,
 			doc.Funny, doc.Cool, doc.Text, doc.Date); err != nil {
 			fmt.Printf("Store data failed. err: %v\n", err)
-			os.Exit(-1)
+			return err
 		}
+
+		return nil
 	}
 	dbFunc.ReadData = func() *Doc { return nil }
-	dbFunc.CloseConnection = func() {
+	dbFunc.CloseConnection = func() error {
 
-		if conn == nil {
-			fmt.Printf("conn is nil\n")
-			os.Exit(-1)
-		}
-
-		err := conn.Close(context.Background())
-		if err != nil {
-			fmt.Printf("Error closing DB connection: %v\n", err)
-			os.Exit(-1)
-		}
+		return db.DBDisconnect()
 	}
 
 	return &dbFunc
