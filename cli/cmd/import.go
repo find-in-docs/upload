@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/samirgadkari/search/pkg/config"
@@ -85,9 +86,17 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 				db.StoreData(v, tableName, wordInts)
 			}
 
-			db.CloseConnection()
+			switch viper.GetString("output.type") {
+			case "file":
+				disk.WriteWordIntMappings(wordToInt, intToWord)
+			case "database":
+				db.StoreWordIntMappings("wordtoint", wordToInt, "inttoword", intToWord)
+			default:
+				fmt.Printf("Incorrect output.type in config file\n")
+				os.Exit(-1)
+			}
 
-			disk.WriteWordIntMappings(wordToInt, intToWord)
+			db.CloseConnection()
 			disk.Close()
 		}
 	},
