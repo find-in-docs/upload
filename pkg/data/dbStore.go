@@ -39,7 +39,7 @@ func DBSetup() *DBFunc {
 	var dbFunc DBFunc
 	docSchema := `(docid bigint,
 			wordints bigint[],
-			inputdocId varchar(25),
+			inputdocId varchar(25) unique,
 			userid varchar(25),
 			businessId varchar(25),
 			stars real, 
@@ -59,7 +59,7 @@ func DBSetup() *DBFunc {
 			cool,
 			text,
 			date)`
-	wordToIntSchema := `(word text,
+	wordToIntSchema := `(word text unique,
 				int bigint)`
 	createWordToIntString := `(word,
 					int)`
@@ -78,27 +78,12 @@ func DBSetup() *DBFunc {
 
 		return db.CreateTable(tableName, docSchema)
 	}
-	dbFunc.StoreWordIntMappings = func(wordToIntTable string, wordToInt map[string]WordInt) error {
-
-		db.CreateTable(wordToIntTable, wordToIntSchema)
-
-		wordToIntInsertStatement := `insert into ` + wordToIntTable + ` ` + createWordToIntString +
-			`values ($1, $2);`
-		for word, i := range wordToInt {
-			if _, err := db.conn.Exec(context.Background(), wordToIntInsertStatement,
-				word, i); err != nil {
-				fmt.Printf("Store Int to Word mapping failed. err: %v\n", err)
-				return err
-			}
-		}
-
-		return nil
-	}
 	dbFunc.StoreData = func(doc *Doc, tableName string, wordInts []WordInt) error {
 
 		insertStatement := `insert into ` + tableName + ` ` + createDocString +
 			` values ($1, $2, $3, $4, $5, 
-			 $6, $7, $8, $9, $10, $11);`
+			 $6, $7, $8, $9, $10, $11)
+			 on conflict(inputdocId) do nothing;`
 
 		if _, err := db.conn.Exec(context.Background(), insertStatement,
 			doc.DocId, doc.WordInts, doc.InputDocId,
@@ -106,6 +91,23 @@ func DBSetup() *DBFunc {
 			doc.Funny, doc.Cool, doc.Text, doc.Date); err != nil {
 			fmt.Printf("Store data failed. err: %v\n", err)
 			return err
+		}
+
+		return nil
+	}
+	dbFunc.StoreWordIntMappings = func(wordToIntTable string, wordToInt map[string]WordInt) error {
+
+		db.CreateTable(wordToIntTable, wordToIntSchema)
+
+		wordToIntInsertStatement := `insert into ` + wordToIntTable + ` ` + createWordToIntString +
+			`values ($1, $2)
+			on conflict(word) do nothing;`
+		for word, i := range wordToInt {
+			if _, err := db.conn.Exec(context.Background(), wordToIntInsertStatement,
+				word, i); err != nil {
+				fmt.Printf("Store Int to Word mapping failed. err: %v\n", err)
+				return err
+			}
 		}
 
 		return nil
