@@ -20,7 +20,6 @@ type ProcFunc struct {
 }
 
 const (
-	maxWordsPerDoc    = 1024
 	wordToIntFilename = "wordToInt.txt"
 	intToWordFilename = "intToWord.txt"
 )
@@ -63,7 +62,7 @@ func getWordsFn() func(string, []string) []string {
 				wordMatches = append(wordMatches, match[1])
 			}
 
-			if len(wordMatches) > maxWordsPerDoc {
+			if len(wordMatches) > data.MaxWordsPerDoc {
 				fmt.Printf("Too many words in doc (%d) !!", len(wordMatches))
 				os.Exit(-1)
 			}
@@ -142,8 +141,8 @@ func WordsToInts(stopwords []string) func(string) ([]data.WordInt, map[string]da
 
 	proc := GenProcFunc(stopwords)
 
-	words := make([]string, maxWordsPerDoc)
-	wordInts := make([]data.WordInt, maxWordsPerDoc)
+	words := make([]string, data.MaxWordsPerDoc)
+	wordInts := make([]data.WordInt, data.MaxWordsPerDoc)
 
 	return func(line string) ([]data.WordInt, map[string]data.WordInt) {
 
@@ -156,4 +155,14 @@ func WordsToInts(stopwords []string) func(string) ([]data.WordInt, map[string]da
 
 		return wordInts, wordToInt
 	}
+}
+
+func WordToIntSwitchKV(wordToInt map[string]data.WordInt) *map[data.WordInt]string {
+
+	intToWord := make(map[data.WordInt]string)
+	for k, v := range wordToInt {
+		intToWord[v] = k
+	}
+
+	return &intToWord
 }

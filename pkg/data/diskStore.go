@@ -50,7 +50,7 @@ func DiskSetup() *DiskFunc {
 		result := make([]WordInt, len(wordInts)+1)
 		doc.WordInts = result
 		copy(result[1:], wordInts)
-		result[0] = doc.DocId
+		result[0] = WordInt(doc.DocId)
 		fmt.Fprintf(bw, "%v\n", result)
 	}
 
