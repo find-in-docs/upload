@@ -63,7 +63,7 @@ func DBSetup() *DBFunc {
 				int bigint)`
 	createWordToIntString := `(word,
 					int)`
-	wordIdsToDocIdsSchema := `(wordid bigint, docids bigint[])`
+	wordIdsToDocIdsSchema := `(wordid bigint unique, docids bigint[])`
 
 	dbFunc.OpenConnection = func() error {
 
@@ -117,7 +117,7 @@ func DBSetup() *DBFunc {
 
 		// In this update statement, the excluded docids are the ones that were not
 		// inserted in.
-		updateStatement := `
+		upsertStatement := `
 			insert into wordid_to_docids(wordid, docids) values($1, $2)
 			on conflict(wordid) do
 			update set docids=array(select distinct unnest(wordid_to_docids.docids || excluded.docids));
@@ -125,7 +125,7 @@ func DBSetup() *DBFunc {
 
 		for k, v := range wordToDocs {
 
-			if _, err := db.conn.Exec(context.Background(), updateStatement,
+			if _, err := db.conn.Exec(context.Background(), upsertStatement,
 				k, v); err != nil {
 				fmt.Printf("Update failed. err: %v\n", err)
 				return err
