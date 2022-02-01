@@ -9,12 +9,13 @@ import (
 )
 
 type DBFunc struct {
-	OpenConnection       func() error
-	CreateTable          func(string) error
-	StoreData            func(*Doc, string, []WordInt) error
-	StoreWordIntMappings func(string, map[string]WordInt) error
-	ReadData             func() *Doc
-	CloseConnection      func() error
+	OpenConnection         func() error
+	CreateTable            func(string) error
+	StoreData              func(*Doc, string, []WordInt) error
+	StoreWordIntMappings   func(string, map[string]WordInt) error
+	StoreWordToDocMappings func(string, map[WordInt][]DocumentId) error
+	ReadData               func() *Doc
+	CloseConnection        func() error
 }
 
 func createTable(conn *pgx.Conn, tableName string, schema string) {
@@ -36,8 +37,8 @@ func DBSetup() *DBFunc {
 	var db *DB
 	var err error
 	var dbFunc DBFunc
-	docSchema := `(docid integer,
-			wordints integer[],
+	docSchema := `(docid bigint,
+			wordints bigint[],
 			inputdocId varchar(25),
 			userid varchar(25),
 			businessId varchar(25),
@@ -59,9 +60,10 @@ func DBSetup() *DBFunc {
 			text,
 			date)`
 	wordToIntSchema := `(word text,
-				int integer)`
+				int bigint)`
 	createWordToIntString := `(word,
 					int)`
+	wordIdsToDocIdsSchema := `(wordid bigint, docids bigint[])`
 
 	dbFunc.OpenConnection = func() error {
 
@@ -104,6 +106,30 @@ func DBSetup() *DBFunc {
 			doc.Funny, doc.Cool, doc.Text, doc.Date); err != nil {
 			fmt.Printf("Store data failed. err: %v\n", err)
 			return err
+		}
+
+		return nil
+	}
+	dbFunc.StoreWordToDocMappings = func(wordIdsToDocIdsTable string,
+		wordToDocs map[WordInt][]DocumentId) error {
+
+		db.CreateTable(wordIdsToDocIdsTable, wordIdsToDocIdsSchema)
+
+		// In this update statement, the excluded docids are the ones that were not
+		// inserted in.
+		updateStatement := `
+			insert into wordid_to_docids(wordid, docids) values($1, $2)
+			on conflict(wordid) do
+			update set docids=array(select distinct unnest(wordid_to_docids.docids || excluded.docids));
+			`
+
+		for k, v := range wordToDocs {
+
+			if _, err := db.conn.Exec(context.Background(), updateStatement,
+				k, v); err != nil {
+				fmt.Printf("Update failed. err: %v\n", err)
+				return err
+			}
 		}
 
 		return nil

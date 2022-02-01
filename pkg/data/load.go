@@ -20,10 +20,15 @@ type InputDoc struct {
 	Date       string  `json:"date"`
 }
 
-type WordInt uint32
+const (
+	MaxWordsPerDoc = 1024
+)
+
+type WordInt uint64
+type DocumentId WordInt
 
 type Doc struct {
-	DocId      WordInt
+	DocId      DocumentId
 	WordInts   []WordInt
 	InputDocId string
 	UserId     string
@@ -93,7 +98,7 @@ func LoadDocFn(dataFile string) func() (*Doc, bool) {
 			}
 
 			copyInputDocToDoc(&inputDoc, doc)
-			doc.DocId = docId
+			doc.DocId = DocumentId(docId)
 			docId += 1
 			in <- *doc
 		}

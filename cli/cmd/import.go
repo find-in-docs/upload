@@ -5,6 +5,8 @@ Copyright © 2022 Samir Gadkari
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/samirgadkari/search/pkg/config"
 	"github.com/samirgadkari/search/pkg/data"
 	"github.com/samirgadkari/search/pkg/transform"
@@ -78,6 +80,18 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 			if err := dbFunc.StoreWordIntMappings("wordtoint", wordToInt); err != nil {
 				break
 			}
+
+			fmt.Printf("Loading docs\n")
+			inputDocs, err := data.LoadDocs()
+			if err != nil {
+				break
+			}
+
+			fmt.Printf("Transforming WordToDocs\n")
+			if err := transform.WordToDocs(inputDocs, dbFunc.StoreWordToDocMappings); err != nil {
+				break
+			}
+
 			if err := dbFunc.CloseConnection(); err != nil {
 				break
 			}
