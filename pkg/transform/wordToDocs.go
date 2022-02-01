@@ -35,13 +35,16 @@ func wordToDocuments(docToWords map[data.DocumentId][]data.WordInt) map[data.Wor
 func WordToDocs(inputDocs <-chan *data.Doc,
 	storeWordToDocMappings func(string, map[data.WordInt][]data.DocumentId) error) error {
 
-	var done <-chan struct{}
 	var err error
 	docToWords := make(map[data.DocumentId][]data.WordInt)
 
 	for {
 		select {
-		case doc := <-inputDocs:
+		case doc, ok := <-inputDocs:
+
+			if !ok { // channel closed by writer
+				return nil
+			}
 
 			if doc == nil {
 				// It is an error to get a doc that is nil.
@@ -69,9 +72,6 @@ func WordToDocs(inputDocs <-chan *data.Doc,
 			}
 
 			docToWords[doc.DocId] = doc.WordInts
-
-		case <-done:
-			return nil
 		}
 	}
 

@@ -71,7 +71,6 @@ func copyInputDocToDoc(inputDoc *InputDoc, doc *Doc) {
 }
 
 func LoadDocFn(dataFile string) func() (*Doc, bool) {
-	done := make(chan struct{})
 	in := make(chan Doc)
 	var inputDoc InputDoc
 	var doc *Doc = new(Doc)
@@ -104,7 +103,6 @@ func LoadDocFn(dataFile string) func() (*Doc, bool) {
 		}
 
 		close(in)
-		close(done)
 	}()
 
 	return func() (*Doc, bool) {
