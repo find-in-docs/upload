@@ -77,7 +77,7 @@ If it is a list of documents, don't include the [] list specifiers. ex:
 				}
 			}
 
-			if err := dbFunc.StoreWordIntMappings("wordtoint", wordToInt); err != nil {
+			if err := dbFunc.StoreWordIntMappings("word_to_int", wordToInt); err != nil {
 				break
 			}
 
