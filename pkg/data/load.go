@@ -3,9 +3,13 @@ package data
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strings"
+
+	"github.com/spf13/viper"
 )
 
 type InputDoc struct {
@@ -41,6 +45,44 @@ type Doc struct {
 	Date       string
 }
 
+// Algorithm:
+// 1. Read block of data. Use regex to split it into lines. Put lines in
+// channel lines.
+// 2. Read line. Convert to Document. Add DocId. Put Doc in channel docs.
+//   From here we can fan out to process lines in parallel.
+// 3. Read docs. Words to nums. Put (*Doc, []Num) in channel nums.
+// 4. Read nums. Store each line in database.
+// 5. Read nums. Store wordid-to-docid in database.
+// 5. Store word-to-int mappings in database.
+
+func readData() {
+
+	dataFilename := viper.GetString("dataFile")
+	lines := make(chan string)
+
+	f, err := os.Open(dataFilename)
+	if err != nil {
+		fmt.Printf("Error opening file %s: err: %v\n", dataFilename, err)
+		os.Exit(-1)
+	}
+	defer f.Close()
+
+	r := bufio.NewReader(f)
+	chunkSize := 1024
+	b := make([]byte, chunkSize)
+	re := regexp.MustCompile(`\{.*?\}`)
+	buf := make([]byte, 0)
+
+	for _, err = r.Read(b); err != nil; {
+
+		buf = append(buf, b...)
+		for line := re.Find(buf); line != nil; {
+
+			lines <- string(line)
+		}
+	}
+}
+
 func splitData(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	if atEOF && len(data) == 0 {
 		return 0, nil, nil
@@ -71,7 +113,6 @@ func copyInputDocToDoc(inputDoc *InputDoc, doc *Doc) {
 }
 
 func LoadDocFn(dataFile string) func() (*Doc, bool) {
-	done := make(chan struct{})
 	in := make(chan Doc)
 	var inputDoc InputDoc
 	var doc *Doc = new(Doc)
@@ -104,7 +145,6 @@ func LoadDocFn(dataFile string) func() (*Doc, bool) {
 		}
 
 		close(in)
-		close(done)
 	}()
 
 	return func() (*Doc, bool) {
