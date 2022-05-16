@@ -3,7 +3,7 @@ package transform
 import (
 	"fmt"
 
-	"github.com/samirgadkari/search/pkg/data"
+	"github.com/find-in-docs/search/pkg/data"
 )
 
 const (
