@@ -1,4 +1,4 @@
-module github.com/samirgadkari/search
+module github.com/find-in-docs/search
 
 go 1.17
 
