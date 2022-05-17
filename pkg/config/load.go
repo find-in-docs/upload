@@ -17,12 +17,12 @@ func (o OutputLocationType) String() string {
 	return [...]string{"file", "database"}[o]
 }
 
-func LoadConfig() {
+func Load() {
 	configFilename := "config.yaml"
 
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath("$HOME/.search")
+	viper.AddConfigPath("$HOME/.upload")
 	viper.AddConfigPath(".")
 
 	if err := viper.ReadInConfig(); err != nil {
