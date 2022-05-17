@@ -7,9 +7,9 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/samirgadkari/search/pkg/config"
-	"github.com/samirgadkari/search/pkg/data"
-	"github.com/samirgadkari/search/pkg/transform"
+	"github.com/find-in-docs/upload/pkg/config"
+	"github.com/find-in-docs/upload/pkg/data"
+	"github.com/find-in-docs/upload/pkg/transform"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

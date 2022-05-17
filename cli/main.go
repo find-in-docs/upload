@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 package main
 
-import "github.com/samirgadkari/search/cli/cmd"
+import "github.com/find-in-docs/upload/cli/cmd"
 
 func main() {
 	cmd.Execute()
