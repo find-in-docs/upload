@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/find-in-docs/search/pkg/config"
+	"github.com/find-in-docs/upload/pkg/config"
 	"github.com/spf13/viper"
 )
 

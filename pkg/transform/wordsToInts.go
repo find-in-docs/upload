@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/find-in-docs/search/pkg/data"
+	"github.com/find-in-docs/upload/pkg/data"
 )
 
 type ProcFunc struct {
