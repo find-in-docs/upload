@@ -1,4 +1,4 @@
-module github.com/find-in-docs/search
+module github.com/find-in-docs/upload
 
 go 1.17
 
