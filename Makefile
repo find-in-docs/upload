@@ -2,8 +2,8 @@
 SHELL := /bin/bash
 
 EXEDIR := ./bin
-EXENAME := sc
-BIN_NAME=./bin/sc
+EXENAME := upload 
+BIN_NAME=./bin/upload
 BIN_NAME=${EXEDIR}/${EXENAME}
 
 # This .PHONY target will ignore any file that exists with the same name as the target
