@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"strings"
+
+	pb "github.com/find-in-docs/sidecar/protos/v1/messages"
 )
 
 type InputDoc struct {
@@ -13,9 +15,9 @@ type InputDoc struct {
 	UserId     string  `json:"user_id"`
 	BusinessId string  `json:"business_id"`
 	Stars      float32 `json:"stars"`
-	Useful     uint16  `json:"useful"`
-	Funny      uint16  `json:"funny"`
-	Cool       uint16  `json:"cool"`
+	Useful     uint32  `json:"useful"`
+	Funny      uint32  `json:"funny"`
+	Cool       uint32  `json:"cool"`
 	Text       string  `json:"text"`
 	Date       string  `json:"date"`
 }
@@ -34,9 +36,9 @@ type Doc struct {
 	UserId     string
 	BusinessId string
 	Stars      float32
-	Useful     uint16
-	Funny      uint16
-	Cool       uint16
+	Useful     uint32
+	Funny      uint32
+	Cool       uint32
 	Text       string
 	Date       string
 }
@@ -58,22 +60,22 @@ func splitData(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	return 0, nil, nil
 }
 
-func copyInputDocToDoc(inputDoc *InputDoc, doc *Doc) {
-	doc.InputDocId = inputDoc.InputDocId
-	doc.UserId = inputDoc.UserId
-	doc.BusinessId = inputDoc.BusinessId
+func copyInputDocToDoc(inputDoc *InputDoc, doc *pb.Doc) {
+	doc.InputDocId = strings.ToValidUTF8(inputDoc.InputDocId, " ")
+	doc.UserId = strings.ToValidUTF8(inputDoc.UserId, " ")
+	// doc.BusinessId = strings.ToValidUTF8(inputDoc.BusinessId, " ")
 	doc.Stars = inputDoc.Stars
 	doc.Useful = inputDoc.Useful
 	doc.Funny = inputDoc.Funny
 	doc.Cool = inputDoc.Cool
-	doc.Text = inputDoc.Text
-	doc.Date = inputDoc.Date
+	doc.Text = strings.ToValidUTF8(inputDoc.Text, " ")
+	doc.Date = strings.ToValidUTF8(inputDoc.Date, " ")
 }
 
-func LoadDocFn(dataFile string) func() (*Doc, bool) {
-	in := make(chan *Doc)
+func LoadDocFn(dataFile string) func() (*pb.Doc, bool) {
+	in := make(chan *pb.Doc)
 	var inputDoc InputDoc
-	var doc *Doc = new(Doc)
+	var doc *pb.Doc = new(pb.Doc)
 	var docId WordInt = 0
 
 	go func() {
@@ -97,7 +99,7 @@ func LoadDocFn(dataFile string) func() (*Doc, bool) {
 			}
 
 			copyInputDocToDoc(&inputDoc, doc)
-			doc.DocId = DocumentId(docId)
+			doc.DocId = uint64(docId)
 			docId += 1
 			in <- doc
 		}
@@ -105,7 +107,7 @@ func LoadDocFn(dataFile string) func() (*Doc, bool) {
 		close(in)
 	}()
 
-	return func() (*Doc, bool) {
+	return func() (*pb.Doc, bool) {
 		line, ok := <-in
 		// fmt.Printf("ok: %t, Got line: %d\n", ok, len(line))
 		if !ok {

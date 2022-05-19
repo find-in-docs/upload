@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
 	"fmt"
 	"os"
 	"regexp"
@@ -14,11 +12,12 @@ import (
 	"github.com/find-in-docs/upload/pkg/config"
 	"github.com/find-in-docs/upload/pkg/data"
 	"github.com/spf13/viper"
+	proto "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 const (
-	chunkSize             = 100
+	chunkSize             = 5
 	allTopicsRecvChanSize = 32
 )
 
@@ -33,7 +32,7 @@ func main() {
 		os.Exit(-1)
 	}
 
-	topic := "search.doc.import.v1"
+	topic := "search.doc.import.response.v1"
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	msgStrRegex := regexp.MustCompile(`\\+?\"|\\+?n|\\+?t`)
@@ -53,7 +52,7 @@ func main() {
 			topic, err)
 	}
 
-	docs := data.LoadDocFn(viper.GetString("dataFile"))
+	docsFn := data.LoadDocFn(viper.GetString("dataFile"))
 
 	var retryNum uint32 = 1
 	retryDelayDuration, err := time.ParseDuration("200ms")
@@ -63,25 +62,25 @@ func main() {
 	}
 	retryDelay := durationpb.New(retryDelayDuration)
 
-	var b bytes.Buffer
-	enc := gob.NewEncoder(&b)
-
-	var doc *data.Doc
-	documents := make([]*data.Doc, chunkSize)
+	var doc *pb.Doc
+	documents := new(pb.Documents)
+	docs := make([]*pb.Doc, chunkSize)
+	documents.Docs = docs
 	var ok bool
 	var count int
-	for doc, ok = docs(); ok; {
+	for doc, ok = docsFn(); ok; {
 
-		documents = append(documents, doc)
-		if count%chunkSize == 0 {
-			err = enc.Encode(documents)
-			if err == nil {
+		docs[count] = doc
+		if count%(chunkSize-1) == 0 {
+
+			b, err := proto.Marshal(documents)
+			if err != nil {
 				fmt.Printf("Error encoding document: %v\n", err)
 				return
 			}
 
 			// Publish data to message queue
-			err = sidecar.Pub(ctx, "search.doc.import.v1", b.Bytes(),
+			err = sidecar.Pub(ctx, "search.doc.import.v1", b,
 				&pb.RetryBehavior{
 					RetryNum:   &retryNum,
 					RetryDelay: retryDelay,
@@ -91,7 +90,8 @@ func main() {
 				fmt.Printf("Error publishing message.\n\terr: %v\n", err)
 			}
 
-			documents = make([]*data.Doc, chunkSize)
+			count = 0
+			break
 		}
 
 		count++

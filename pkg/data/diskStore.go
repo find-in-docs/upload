@@ -7,12 +7,13 @@ import (
 	"os"
 	"path/filepath"
 
+	pb "github.com/find-in-docs/sidecar/protos/v1/messages"
 	"github.com/find-in-docs/upload/pkg/config"
 	"github.com/spf13/viper"
 )
 
 type DiskFunc struct {
-	LoadDoc              func() (*Doc, bool)
+	LoadDoc              func() (*pb.Doc, bool)
 	StoreData            func(*Doc, []WordInt)
 	WriteWordIntMappings func(map[string]WordInt)
 	Close                func()
