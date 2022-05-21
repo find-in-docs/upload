@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"regexp"
-	"time"
 
 	"github.com/find-in-docs/sidecar/pkg/client"
 	pb "github.com/find-in-docs/sidecar/protos/v1/messages"
@@ -13,7 +11,6 @@ import (
 	"github.com/find-in-docs/upload/pkg/data"
 	"github.com/spf13/viper"
 	proto "google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 const (
@@ -32,47 +29,22 @@ func main() {
 		os.Exit(-1)
 	}
 
-	topic := "search.doc.import.response.v1"
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	msgStrRegex := regexp.MustCompile(`\\+?\"|\\+?n|\\+?t`)
 
-	err = sidecar.ProcessSubMsgs(ctx, topic,
-		allTopicsRecvChanSize, func(m *pb.SubTopicResponse) {
+	docsCh := data.LoadDocFn(viper.GetString("dataFile"))
 
-			msg := fmt.Sprintf("Received from sidecar:\n\t%s", m.String())
-			msg2 := msgStrRegex.ReplaceAllString(msg, "")
-			fmt.Printf("%s\n", msg2)
-
-			// Process incoming message
-		})
-
-	if err != nil {
-		fmt.Printf("Error processing subscription messages:\n\ttopic: %s\n\terr: %v\n",
-			topic, err)
-	}
-
-	docsFn := data.LoadDocFn(viper.GetString("dataFile"))
-
-	var retryNum uint32 = 1
-	retryDelayDuration, err := time.ParseDuration("200ms")
-	if err != nil {
-		fmt.Printf("Error creating Golang time duration.\nerr: %v\n", err)
-		os.Exit(-1)
-	}
-	retryDelay := durationpb.New(retryDelayDuration)
-
-	var doc *pb.Doc
 	documents := new(pb.Documents)
 	docs := make([]*pb.Doc, chunkSize)
 	documents.Docs = docs
-	var ok bool
 	var count int
-	for doc, ok = docsFn(); ok; {
+	var numOutput int
+	for doc := range docsCh {
 
 		docs[count] = doc
-		if count%(chunkSize-1) == 0 {
+		if count == chunkSize-1 {
 
+			fmt.Printf("len(docs): %d\n\n", len(docs))
 			b, err := proto.Marshal(documents)
 			if err != nil {
 				fmt.Printf("Error encoding document: %v\n", err)
@@ -80,21 +52,20 @@ func main() {
 			}
 
 			// Publish data to message queue
-			err = sidecar.Pub(ctx, "search.doc.import.v1", b,
-				&pb.RetryBehavior{
-					RetryNum:   &retryNum,
-					RetryDelay: retryDelay,
-				},
-			)
+			err = sidecar.PubJS(ctx, "search.doc.import.v1", "uploadWorkQueue", b)
 			if err != nil {
 				fmt.Printf("Error publishing message.\n\terr: %v\n", err)
 			}
 
 			count = 0
-			break
-		}
+			numOutput++
+			if numOutput == 2 {
+				break
+			}
+		} else {
 
-		count++
+			count++
+		}
 	}
 
 	/*

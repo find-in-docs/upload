@@ -43,27 +43,10 @@ type Doc struct {
 	Date       string
 }
 
-func splitData(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	if atEOF && len(data) == 0 {
-		return 0, nil, nil
-	}
-
-	dataString := string(data)
-	if i := strings.Index(dataString, "}"); i >= 0 {
-		return i + 2, data[:i+2], nil
-	}
-
-	if atEOF {
-		return len(data), data, nil
-	}
-
-	return 0, nil, nil
-}
-
-func copyInputDocToDoc(inputDoc *InputDoc, doc *pb.Doc) {
+func copyInputDocToDoc(doc *pb.Doc, inputDoc *InputDoc) {
 	doc.InputDocId = strings.ToValidUTF8(inputDoc.InputDocId, " ")
 	doc.UserId = strings.ToValidUTF8(inputDoc.UserId, " ")
-	// doc.BusinessId = strings.ToValidUTF8(inputDoc.BusinessId, " ")
+	doc.BusinessId = strings.ToValidUTF8(inputDoc.BusinessId, " ")
 	doc.Stars = inputDoc.Stars
 	doc.Useful = inputDoc.Useful
 	doc.Funny = inputDoc.Funny
@@ -72,11 +55,9 @@ func copyInputDocToDoc(inputDoc *InputDoc, doc *pb.Doc) {
 	doc.Date = strings.ToValidUTF8(inputDoc.Date, " ")
 }
 
-func LoadDocFn(dataFile string) func() (*pb.Doc, bool) {
+func LoadDocFn(dataFile string) chan *pb.Doc {
 	in := make(chan *pb.Doc)
 	var inputDoc InputDoc
-	var doc *pb.Doc = new(pb.Doc)
-	var docId WordInt = 0
 
 	go func() {
 		f, err := os.Open(dataFile)
@@ -89,8 +70,6 @@ func LoadDocFn(dataFile string) func() (*pb.Doc, bool) {
 
 		s := bufio.NewScanner(f)
 
-		s.Split(splitData)
-
 		for s.Scan() {
 			line := s.Text()
 			if err := json.Unmarshal([]byte(line), &inputDoc); err != nil {
@@ -98,21 +77,13 @@ func LoadDocFn(dataFile string) func() (*pb.Doc, bool) {
 				os.Exit(-1)
 			}
 
-			copyInputDocToDoc(&inputDoc, doc)
-			doc.DocId = uint64(docId)
-			docId += 1
+			doc := new(pb.Doc)
+			copyInputDocToDoc(doc, &inputDoc)
 			in <- doc
 		}
 
 		close(in)
 	}()
 
-	return func() (*pb.Doc, bool) {
-		line, ok := <-in
-		// fmt.Printf("ok: %t, Got line: %d\n", ok, len(line))
-		if !ok {
-			return nil, ok
-		}
-		return line, ok
-	}
+	return in
 }

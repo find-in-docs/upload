@@ -29,6 +29,7 @@ ${EXEDIR}:
 	mkdir ${EXEDIR}
 
 build: | ${EXEDIR}
+	 go get -u github.com/find-in-docs/sidecar
 	 go build -o ${BIN_NAME} pkg/main/main.go
 
 run: build
