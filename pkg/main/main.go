@@ -85,4 +85,6 @@ func main() {
 			doc.WordInts = wordInts
 		}
 	*/
+
+	select {} // This will wait forever
 }
