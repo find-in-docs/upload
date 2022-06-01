@@ -61,12 +61,12 @@ func LoadDocFn(dataFile string) chan *pb.Doc {
 
 	go func() {
 		f, err := os.Open(dataFile)
-		defer f.Close()
-
 		if err != nil {
 			log.Fatalf("Error opening file %s", dataFile)
 			os.Exit(-1)
 		}
+
+		defer f.Close()
 
 		s := bufio.NewScanner(f)
 
