@@ -14,6 +14,8 @@ import (
 
 func main() {
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	var wg sync.WaitGroup
 
 	config.Load()
@@ -25,13 +27,12 @@ func main() {
 		os.Exit(-1)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	wg.Add(1)
 
-	if err = sidecar.AddJS(ctx, viper.GetString("nats.jetstream.subject"),
-		viper.GetString("nats.jetstream.name")); err != nil {
+	subject := viper.GetString("nats.jetstream.subject")
+	workQueue := viper.GetString("nats.jetstream.name")
+
+	if err = sidecar.AddJS(ctx, subject, workQueue); err != nil {
 
 		fmt.Printf("Error adding stream: %v\n", err)
 		os.Exit(-1)
@@ -44,7 +45,7 @@ func main() {
 		os.Exit(-1)
 	}
 
-	if err = sidecar.UploadDocs(ctx, docsCh); err != nil {
+	if err = sidecar.UploadDocs(wg, docsCh); err != nil {
 		fmt.Printf("Error uploading docs. err: %v\n", err)
 		os.Exit(-1)
 	}
@@ -66,6 +67,15 @@ func main() {
 			doc.WordInts = wordInts
 		}
 	*/
+
+	// Cancel any goroutines which are still running for the upload
+	cancel()
+
+	if err = sidecar.UnsubJS(ctx, subject, workQueue); err != nil {
+
+		fmt.Printf("Error unsubscribing from stream: %v\n", err)
+		os.Exit(-1)
+	}
 
 	wg.Wait()
 }
