@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sidecar-config
+data:
+  sidecar-config.yaml: |
+    serviceName: sidecar
+    output:
+      type: database
+      connection: "host=postgres port=5432 user=pg dbname=search password=pg sslmode=disable"
+    nats:
+      url: "nats://nats:4222"   # In the form of: nats://serverName:port
+      maxMsgs: 100
+      jetstream:
+        goroutineChanSize: 32
+        thresholdOFF: 64
+        thresholdON: 32
+        consumer:
+          durableName: uploadDocsConsumer
+        name: uploadDocs
+        subject: search.v1.import.doc
+        recvChanSize: 1
+        msgChunkSize: 5
+        flowControlTimeoutInNs: "100000000ns"
+        fetch:
+          numMsgs: 2
+          timeoutInSecs: 3s
+    sidecarServiceAddr: "127.0.0.1:5555"
