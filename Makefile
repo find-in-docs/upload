@@ -75,4 +75,4 @@ upload: build
 	# We specify image-pull-policy=Never because we're actually building the image on minikube.
 	# kubectl run upload --image=persistlogs:latest --image-pull-policy=Never --restart=Never
 
-	kubectl apply -f manifests/minikube
+	# kubectl apply -f manifests/minikube
