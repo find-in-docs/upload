@@ -33,6 +33,8 @@ COPY pkg/ /app/pkg/
 #   - Locate the IP address of the DNS server
 COPY manifests/minikube/resolv.conf /etc/resolv.conf
 
+COPY yelp_short.json ./
+
 RUN go build -o upload pkg/main/main.go
 
 RUN mkdir -p /var/lib/postgres/data && \
