@@ -32,6 +32,7 @@ func main() {
 	subject := viper.GetString("nats.jetstream.subject")
 	workQueue := viper.GetString("nats.jetstream.name")
 
+  fmt.Printf("Adding subject:%s, workQueue:%s\n", subject, workQueue)
 	if err = sidecar.AddJS(ctx, subject, workQueue); err != nil {
 
 		fmt.Printf("Error adding stream: %v\n", err)
